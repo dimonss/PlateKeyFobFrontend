@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck } from 'lucide-react';
-import { loginUser, loginGoogle, loginTelegram } from '../api/auth';
+import { X } from 'lucide-react';
+import { loginGoogle, loginTelegram } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
@@ -13,7 +13,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const { login } = useAuth();
   const { showToast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   const handleGoogleSuccess = async (response: any) => {
     setIsLoading(true);
@@ -64,21 +64,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     handleTelegramSuccess
   );
 
-  const handleQuickDemoAdmin = async () => {
-    setIsLoading(true);
-    try {
-      const res = await loginUser('admin@platekeyfob.kg', 'adminpassword123');
-      login(res.user);
-      showToast({ type: 'success', title: 'Вход выполнен как Администратор', message: 'Доступны функции управления заказами' });
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Ошибка входа админа';
-      showToast({ type: 'error', title: 'Ошибка', message: msg });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="modal-overlay">
       <div className="modal-content glass-elevated" style={{ padding: '28px', maxWidth: '400px', textAlign: 'center' }}>
@@ -94,27 +79,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         </p>
 
         {/* Google & Telegram Social Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
           <div id="google-btn" style={{ minHeight: '40px', display: 'flex', justifyContent: 'center' }}></div>
           <div id="telegram-login-container" style={{ minHeight: '40px', display: 'flex', justifyContent: 'center' }}></div>
-        </div>
-
-        {/* Admin Quick Login Option */}
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', textAlign: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-gold"
-            disabled={isLoading}
-            style={{ width: '100%', padding: '10px', fontSize: '0.85rem' }}
-            onClick={handleQuickDemoAdmin}
-          >
-            <ShieldCheck size={16} /> Войти как Администратор (.env)
-          </button>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '6px' }}>
-            Вход с правами администратора
-          </div>
         </div>
       </div>
     </div>
   );
 };
+
