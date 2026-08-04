@@ -19,6 +19,24 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
+export async function loginTelegram(data: any): Promise<AuthResponse> {
+  const res = await apiRequest<AuthResponse>('/auth/telegram', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  setTokens(res.accessToken, res.refreshToken);
+  return res;
+}
+
+export async function loginGoogle(credential: string): Promise<AuthResponse> {
+  const res = await apiRequest<AuthResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+  setTokens(res.accessToken, res.refreshToken);
+  return res;
+}
+
 export async function loginUser(email: string, password?: string): Promise<AuthResponse> {
   const res = await apiRequest<AuthResponse>('/auth/login', {
     method: 'POST',
