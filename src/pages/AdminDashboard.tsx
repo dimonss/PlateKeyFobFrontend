@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin } from 'lucide-react';
+import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock } from 'lucide-react';
 import { fetchAdminOrders, updateOrderStatusApi, fetchAdminStats, type AdminStats } from '../api/admin';
 import type { OrderItem } from '../api/orders';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { PlateVisualizer2D } from '../components/PlateVisualizer2D';
 
 export const AdminDashboard: React.FC = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -17,6 +19,7 @@ export const AdminDashboard: React.FC = () => {
   const [selectedOrderForModal, setSelectedOrderForModal] = useState<OrderItem | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!user?.isAdmin) return;
     setIsLoading(true);
     try {
       const [ordersData, statsData] = await Promise.all([
@@ -56,6 +59,18 @@ export const AdminDashboard: React.FC = () => {
   const handlePrintManifest = () => {
     window.print();
   };
+
+  if (!user || !user.isAdmin) {
+    return (
+      <div className="glass-elevated" style={{ padding: '48px 24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto' }}>
+        <Lock size={48} color="#f43f5e" style={{ marginBottom: '16px' }} />
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px' }}>Доступ ограничен</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          Для доступа к панели администратора необходимо войти под аккаунтом с правами администратора.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>

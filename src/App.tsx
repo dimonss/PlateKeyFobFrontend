@@ -10,10 +10,12 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingPage } from './pages/OrderTrackingPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
+import { useAuth } from './context/AuthContext';
 import type { PlateConfig } from './components/PlateVisualizer2D';
 import type { OrderItem } from './api/orders';
 
 export const AppContent: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'customizer' | 'track' | 'orders' | 'admin'>('customizer');
 
   // Checkout modal state
@@ -23,6 +25,15 @@ export const AppContent: React.FC = () => {
 
   // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Automatically reset tab when user logs out or permission changes
+  React.useEffect(() => {
+    if (activeTab === 'admin' && !user?.isAdmin) {
+      setActiveTab('customizer');
+    } else if (activeTab === 'orders' && !user) {
+      setActiveTab('customizer');
+    }
+  }, [user, activeTab]);
 
   const handleOrderClick = (config: PlateConfig, price: number) => {
     setCheckoutConfig(config);
