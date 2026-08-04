@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, UserCheck } from 'lucide-react';
 import { loginGoogle, loginTelegram } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -13,7 +13,23 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const { login } = useAuth();
   const { showToast } = useToast();
-  const [, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   const handleGoogleSuccess = async (response: any) => {
     setIsLoading(true);
@@ -65,26 +81,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   );
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content glass-elevated" style={{ padding: '28px', maxWidth: '400px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Авторизация</h3>
-          <button className="toast-close" onClick={onClose}>
-            <X size={24} />
-          </button>
+    <div className="auth-modal-overlay" onClick={handleOverlayClick}>
+      <div className="auth-modal-card">
+        {/* Glow ambient background light */}
+        <div className="auth-modal-glow-orb" />
+
+        {/* Close Button */}
+        <button
+          className="auth-modal-close"
+          onClick={onClose}
+          aria-label="Закрыть модальное окно"
+          title="Закрыть"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="auth-loading-overlay">
+            <div className="auth-spinner" />
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600 }}>
+              Выполняется вход...
+            </span>
+          </div>
+        )}
+
+        {/* Modal Header */}
+        <div className="auth-modal-header">
+          <div className="auth-modal-icon-badge">
+            <UserCheck size={30} />
+          </div>
+          <h3 className="auth-modal-title">Авторизация</h3>
+          <p className="auth-modal-subtitle">
+            Выберите удобный способ входа для оформления и отслеживания заказов
+          </p>
         </div>
 
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '24px' }}>
-          Выберите удобный способ входа в систему:
-        </p>
+        {/* Modal Body with Social Buttons */}
+        <div className="auth-modal-body">
+          <div className="auth-social-wrapper">
+            <div id="google-btn" className="auth-social-btn-container" />
+            <div id="telegram-login-container" className="auth-social-btn-container" />
+          </div>
+        </div>
 
-        {/* Google & Telegram Social Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-          <div id="google-btn" style={{ minHeight: '40px', display: 'flex', justifyContent: 'center' }}></div>
-          <div id="telegram-login-container" style={{ minHeight: '40px', display: 'flex', justifyContent: 'center' }}></div>
+        {/* Modal Footer Security Note */}
+        <div className="auth-modal-footer">
+          <ShieldCheck size={16} style={{ color: 'var(--accent-green)' }} />
+          <span>Ваши персональные данные надежно защищены</span>
         </div>
       </div>
     </div>
   );
 };
+
 
