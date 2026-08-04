@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
         
         <div>
           <h4 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', fontFamily: 'var(--font-display)' }}>
-            PLATE<span style={{ color: '#f43f5e' }}>FOB</span> KG
+            PLATE<span style={{ color: '#f43f5e' }}>KEYCHAIN</span> KG
           </h4>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
             Производство премиальных металлических брелков с кыргызскими государственными автономерами. Нержавеющая сталь, 3D каемки, защита от царапин.
@@ -39,7 +39,7 @@ export const Footer: React.FC = () => {
       </div>
 
       <div style={{ maxWidth: '1200px', margin: '30px auto 0', borderTop: '1px solid var(--border-color)', paddingTop: '20px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-        © 2026 PlateKeyFob Kyrgyzstan. Все права защищены. Shared Auth compatible with RetrospectiveAggregator.
+        © 2026 PlateKeychain Kyrgyzstan. Все права защищены. Shared Auth compatible with RetrospectiveAggregator.
       </div>
     </footer>
   );

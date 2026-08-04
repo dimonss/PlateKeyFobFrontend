@@ -8,6 +8,7 @@ import { SundayDeliveryNotice } from './components/SundayDeliveryNotice';
 import { KeychainCustomizer } from './components/KeychainCustomizer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderTrackingPage } from './pages/OrderTrackingPage';
+import { MyOrdersPage } from './pages/MyOrdersPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
@@ -64,7 +65,12 @@ export const AppContent: React.FC = () => {
 
         {activeTab === 'track' && <OrderTrackingPage />}
 
-        {activeTab === 'orders' && <OrderTrackingPage />}
+        {activeTab === 'orders' && (
+          <MyOrdersPage
+            onGoToCustomizer={() => setActiveTab('customizer')}
+            onGoToTrack={() => setActiveTab('track')}
+          />
+        )}
 
         {activeTab === 'admin' && <AdminDashboard />}
       </main>

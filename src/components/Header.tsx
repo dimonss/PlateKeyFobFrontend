@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              PLATE<span style={{ color: '#f43f5e' }}>FOB</span>
+              PLATE<span style={{ color: '#f43f5e' }}>KEYCHAIN</span>
               <span className="badge badge-sunday" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>KG</span>
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Кыргызские Гос Номера</div>

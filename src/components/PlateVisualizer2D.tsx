@@ -115,7 +115,7 @@ const KyrgyzFlagSVG: React.FC<{ width?: number; height?: number }> = ({ width = 
 export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Material border styling for Fob frame
+  // Material border styling for Keychain frame
   const getMaterialStyle = () => {
     switch (config.material) {
       case 'gold_edge':
@@ -150,7 +150,7 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', width: '100%' }}>
-      {/* 2D Fob Frame Container */}
+      {/* 2D Keychain Frame Container */}
       <div style={{ perspective: '1000px', width: '100%', maxWidth: '440px' }}>
         <div
           style={{
