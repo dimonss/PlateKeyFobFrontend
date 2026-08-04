@@ -1,4 +1,5 @@
-const API_BASE = '/api';
+const BASE_PREFIX = import.meta.env.BASE_URL ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
+const API_BASE = `${BASE_PREFIX}/api`;
 
 export function getTokens() {
   return {
