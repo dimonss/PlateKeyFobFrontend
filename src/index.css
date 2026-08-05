@@ -1,7 +1,17 @@
+@font-face {
+  font-family: 'Euro Plate';
+  src: url('/fonts/EuroPlate.ttf') format('truetype'),
+       url('https://nomer.srs.kg/javax.faces.resource/EuroPlate.ttf.xhtml?ln=fonts') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: 'Outfit', sans-serif;
   --font-mono: 'Share Tech Mono', monospace;
+  --font-plate: 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', sans-serif;
 
   /* Color Palette - Dark Theme Default */
   --bg-color: #0c0e12;

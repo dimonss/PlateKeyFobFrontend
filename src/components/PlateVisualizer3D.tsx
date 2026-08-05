@@ -149,7 +149,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
       // Top part of left block: Region Code ("01")
       ctx.fillStyle = '#1e1e1e';
-      ctx.font = '900 155px "FE-Schrift", "License Plate", "Oswald", "Bebas Neue", "Share Tech Mono", monospace';
+      ctx.font = '900 155px "Euro Plate", "FE-Schrift", "License Plate", "Oswald", "Bebas Neue", monospace';
       ctx.textAlign = 'center';
       ctx.fillText(config.regionCode, 12 + leftBlockWidth / 2, 160);
 
@@ -163,14 +163,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
       // "KG" text next to flag
       ctx.fillStyle = '#1e1e1e';
-      ctx.font = '900 62px "FE-Schrift", "License Plate", "Oswald", "Outfit", sans-serif';
+      ctx.font = '900 62px "Euro Plate", "FE-Schrift", "License Plate", "Oswald", "Outfit", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('KG', flagX + flagW + 12, flagY + flagH - 8);
 
       // Right Main Plate Text (e.g. "777 AAA")
       const pText = config.plateNumber || '777 AAA';
       const fontSize = pText.length > 8 ? 140 : 190;
-      ctx.font = `900 ${fontSize}px "FE-Schrift", "License Plate", "Oswald", "Bebas Neue", "Share Tech Mono", monospace`;
+      ctx.font = `900 ${fontSize}px "Euro Plate", "FE-Schrift", "License Plate", "Oswald", "Bebas Neue", monospace`;
       ctx.textAlign = 'center';
 
       // Subtle shadow effect on plate text for 3D embossed look

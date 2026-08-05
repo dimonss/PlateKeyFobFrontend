@@ -62,55 +62,223 @@ const LOGO_SVGS: Record<string, JSX.Element> = {
   none: <></>,
 };
 
-// High-Fidelity Official Flag of the Kyrgyz Republic
-const KyrgyzFlagSVG: React.FC<{ width?: number; height?: number }> = ({ width = 36, height = 24 }) => (
-  <svg
-    viewBox="0 0 60 40"
-    width={width}
-    height={height}
-    style={{
-      borderRadius: '2px',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-      flexShrink: 0,
-      display: 'block',
-      border: '0.5px solid rgba(0,0,0,0.2)',
-    }}
-  >
-    {/* Crimson Red Field */}
-    <rect width="60" height="40" fill="#E11D48" />
+/**
+ * Parses user plate text into digits and letters according to KG plate standard.
+ * e.g. "5555 M" -> { digits: "5555", letters: "M" }
+ * e.g. "777 AAA" -> { digits: "777", letters: "AAA" }
+ */
+function parsePlateText(text: string) {
+  const trimmed = (text || '5555 M').trim().toUpperCase();
+  const match = trimmed.match(/^([0-9]{1,4})\s*([A-ZА-Я]{1,3})$/i);
+  if (match) {
+    return {
+      digits: match[1],
+      letters: match[2],
+      isStandard: true,
+    };
+  }
+  return {
+    digits: trimmed,
+    letters: '',
+    isStandard: false,
+  };
+}
 
-    {/* Sun Disk & 40 Rays */}
-    <g transform="translate(30,20)">
-      {/* 40 Rays around Sun */}
-      {Array.from({ length: 40 }).map((_, i) => {
-        const angle = (i * 360) / 40;
-        return (
-          <path
-            key={i}
-            d="M 0 -11 C 1.2 -14, 2.4 -15.5, 0 -17.5 C -2.4 -15.5, -1.2 -14, 0 -11 Z"
-            fill="#FBBF24"
-            transform={`rotate(${angle})`}
-          />
-        );
-      })}
+/**
+ * 2D Kyrgyzstan License Plate SVG component.
+ * Exact 1:1 blueprint reproduction based on standard dimensions:
+ * - Canvas: 520mm x 112mm (Aspect Ratio ~4.64:1)
+ * - Left section: 140mm
+ * - Region code height: 48mm
+ * - Flag dimensions: 40mm x 26mm
+ * - Digits height: 75mm
+ * - Letters height: 62mm
+ * - Baseline aligned digits & letters
+ */
+export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
+  const parsed = parsePlateText(config.plateNumber);
+  const regionText = config.regionCode || '01';
 
-      {/* Sun disk ring */}
-      <circle r="9" fill="#FBBF24" />
-      <circle r="7.2" fill="#E11D48" />
+  return (
+    <svg
+      viewBox="0 0 520 112"
+      style={{
+        width: '100%',
+        height: 'auto',
+        display: 'block',
+        borderRadius: '8px',
+      }}
+    >
+      <defs>
+        {/* Soft plate surface background */}
+        <linearGradient id="plateBgGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F8FAFC" />
+        </linearGradient>
 
-      {/* Tunduk emblem */}
-      <g stroke="#FBBF24" strokeWidth="1.2" fill="none" strokeLinecap="round">
-        <path d="M -5.5 -4 C -2 -1.2, 2 -1.2, 5.5 -4" />
-        <path d="M -6.2 0 C -2.2 2.5, 2.2 2.5, 6.2 0" />
-        <path d="M -5.5 4 C -2 1.2, 2 1.2, 5.5 4" />
+        {/* Embossed shadow filter for text */}
+        <filter id="embossFilter" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0.6" dy="0.6" stdDeviation="0.4" floodColor="#000000" floodOpacity="0.25" />
+        </filter>
+      </defs>
 
-        <path d="M -4 -5.5 C -1.2 -2, -1.2 2, -4 5.5" />
-        <path d="M 0 -6.2 C 2.5 -2.2, 2.5 2.2, 0 6.2" />
-        <path d="M 4 -5.5 C 1.2 -2, 1.2 2, 4 5.5" />
+      {/* 1. License Plate Base Surface (520mm x 112mm) */}
+      <rect
+        x="0"
+        y="0"
+        width="520"
+        height="112"
+        rx="8"
+        ry="8"
+        fill="url(#plateBgGrad)"
+      />
+
+      {/* 2. Thicker Outer Black Frame Line (Positioned right at 0-edge perimeter) */}
+      <rect
+        x="2.25"
+        y="2.25"
+        width="515.5"
+        height="107.5"
+        rx="6"
+        ry="6"
+        fill="none"
+        stroke="#1E1E1E"
+        strokeWidth="4.5"
+      />
+
+      {/* 3. Thicker Vertical Section Separator (at 140mm mark) */}
+      <line
+        x1="140"
+        y1="0"
+        x2="140"
+        y2="112"
+        stroke="#1E1E1E"
+        strokeWidth="4.5"
+      />
+
+      {/* ================= LEFT SECTION (0..140mm) ================= */}
+      {/* Region Code (e.g. "01") - 48mm design height */}
+      <text
+        x="70"
+        y="57"
+        textAnchor="middle"
+        fontSize="56"
+        fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
+        fontWeight="900"
+        fill="#1E1E1E"
+        letterSpacing="-0.5"
+        filter="url(#embossFilter)"
+      >
+        {regionText}
+      </text>
+
+      {/* Flag of Kyrgyz Republic (40mm width x 26mm height, centered under left digit '0' at x=28) */}
+      <g transform="translate(28, 72)">
+        {/* Crimson Red Field */}
+        <rect width="40" height="26" fill="#E11D48" rx="1.5" />
+
+        {/* Sun Disk & 40 Curved Rays */}
+        <g transform="translate(20, 13)">
+          {/* 40 Rays */}
+          {Array.from({ length: 40 }).map((_, i) => {
+            const angle = (i * 360) / 40;
+            return (
+              <path
+                key={i}
+                d="M 0 -7.2 C 0.8 -9.2, 1.6 -10.2, 0 -11.6 C -1.6 -10.2, -0.8 -9.2, 0 -7.2 Z"
+                fill="#FBBF24"
+                transform={`rotate(${angle})`}
+              />
+            );
+          })}
+
+          {/* Center Sun Disk */}
+          <circle r="6" fill="#FBBF24" />
+          <circle r="4.8" fill="#E11D48" />
+
+          {/* Tunduk emblem */}
+          <g stroke="#FBBF24" strokeWidth="0.8" fill="none" strokeLinecap="round">
+            <path d="M -3.6 -2.6 C -1.3 -0.8, 1.3 -0.8, 3.6 -2.6" />
+            <path d="M -4.2 0 C -1.5 1.6, 1.5 1.6, 4.2 0" />
+            <path d="M -3.6 2.6 C -1.3 0.8, 1.3 0.8, 3.6 2.6" />
+
+            <path d="M -2.6 -3.6 C -0.8 -1.3, -0.8 1.3, -2.6 3.6" />
+            <path d="M 0 -4.2 C 1.6 -1.5, 1.6 1.5, 0 4.2" />
+            <path d="M 2.6 -3.6 C 0.8 -1.3, 0.8 1.3, 2.6 3.6" />
+          </g>
+        </g>
+
+        {/* Flag boundary border */}
+        <rect width="40" height="26" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="1.5" />
       </g>
-    </g>
-  </svg>
-);
+
+      {/* "KG" Country Identifier (height ~26mm, baseline y=96mm, centered under right digit '1' at x=76) */}
+      <text
+        x="76"
+        y="96"
+        fontSize="30"
+        fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif"
+        fontWeight="900"
+        fill="#1E1E1E"
+        letterSpacing="0.5"
+        filter="url(#embossFilter)"
+      >
+        KG
+      </text>
+
+      {/* ================= RIGHT SECTION (140..520mm) ================= */}
+      {/* Center of right section is x = 330mm. Baseline is y = 92mm. */}
+      {parsed.isStandard ? (
+        <text
+          x="330"
+          y="92"
+          textAnchor="middle"
+          filter="url(#embossFilter)"
+        >
+          {/* Digits: 75mm design height -> fontSize=92 */}
+          <tspan
+            fontSize="92"
+            fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
+            fontWeight="900"
+            fill="#1E1E1E"
+            letterSpacing="0"
+          >
+            {parsed.digits}
+          </tspan>
+
+          {/* Suffix Letters: 62mm design height -> fontSize=76 */}
+          {parsed.letters && (
+            <tspan
+              dx="24"
+              fontSize="76"
+              fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
+              fontWeight="900"
+              fill="#1E1E1E"
+              letterSpacing="0"
+            >
+              {parsed.letters}
+            </tspan>
+          )}
+        </text>
+      ) : (
+        /* Non-standard or custom text string */
+        <text
+          x="330"
+          y="91"
+          textAnchor="middle"
+          fontSize={parsed.digits.length > 8 ? '54' : parsed.digits.length > 6 ? '70' : '86'}
+          fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
+          fontWeight="900"
+          fill="#1E1E1E"
+          letterSpacing="2"
+          filter="url(#embossFilter)"
+        >
+          {parsed.digits}
+        </text>
+      )}
+    </svg>
+  );
+};
 
 export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -165,8 +333,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
           <div
             style={{
               width: '100%',
-              borderRadius: '16px',
-              padding: '10px',
+              borderRadius: '10px',
+              padding: '2px',
               backfaceVisibility: 'hidden',
               ...getMaterialStyle(),
             }}
@@ -188,115 +356,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
               }}
             />
 
-            {/* License Plate Surface (Single Border Line) */}
-            <div
-              style={{
-                background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                borderRadius: '10px',
-                border: '2.5px solid #1e1e1e',
-                padding: '4px 6px',
-                display: 'flex',
-                alignItems: 'stretch',
-                height: '102px',
-                overflow: 'hidden',
-                boxShadow: 'inset 0 0 4px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.2)',
-                width: '100%',
-              }}
-            >
-              {/* LEFT REGION BLOCK (Region Code on Top, Flag + KG on Bottom) */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingRight: '6px',
-                  paddingLeft: '4px',
-                  paddingTop: '2px',
-                  paddingBottom: '2px',
-                  borderRight: '2.5px solid #1e1e1e',
-                  minWidth: 'clamp(68px, 20vw, 84px)',
-                  userSelect: 'none',
-                  flexShrink: 0,
-                }}
-              >
-                {/* Region Code (e.g. "01") */}
-                <div
-                  style={{
-                    fontSize: 'clamp(1.8rem, 6vw, 2.4rem)',
-                    fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', var(--font-mono), monospace",
-                    fontWeight: 900,
-                    color: '#1e1e1e',
-                    lineHeight: 0.95,
-                    letterSpacing: '-0.02em',
-                    marginTop: '2px',
-                    textShadow: '0.5px 0.5px 0px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  {config.regionCode}
-                </div>
-
-                {/* Flag & "KG" Row */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    marginBottom: '2px',
-                  }}
-                >
-                  <KyrgyzFlagSVG width={30} height={20} />
-                  <span
-                    style={{
-                      fontSize: 'clamp(1rem, 3.5vw, 1.25rem)',
-                      fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', 'Inter', sans-serif",
-                      fontWeight: 900,
-                      color: '#1e1e1e',
-                      lineHeight: 1,
-                      letterSpacing: '0.5px',
-                      textShadow: '0.5px 0.5px 0px rgba(0,0,0,0.15)',
-                    }}
-                  >
-                    KG
-                  </span>
-                </div>
-              </div>
-
-              {/* RIGHT MAIN PLATE TEXT SECTION */}
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingLeft: '6px',
-                  paddingRight: '4px',
-                  userSelect: 'none',
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: (config.plateNumber || '').length > 8 
-                      ? 'clamp(1.5rem, 5vw, 2.4rem)' 
-                      : 'clamp(2rem, 7.5vw, 3.3rem)',
-                    fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', var(--font-mono), monospace",
-                    fontWeight: 900,
-                    color: '#1e1e1e',
-                    letterSpacing: '0.05em',
-                    lineHeight: 1,
-                    whiteSpace: 'nowrap',
-                    textShadow: '0.5px 0.5px 0px rgba(0,0,0,0.2)',
-                    textTransform: 'uppercase',
-                    textAlign: 'center',
-                    width: '100%',
-                  }}
-                >
-                  {config.plateNumber || '777 AAA'}
-                </div>
-              </div>
-            </div>
+            {/* 1:1 Vector License Plate */}
+            <SVGPlate2D config={config} />
           </div>
 
           {/* BACK SIDE */}
@@ -352,8 +413,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
         </div>
       </div>
 
-      {/* Control Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Control Actions & Info */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
         <button
           className="btn btn-secondary"
           onClick={() => setIsFlipped(!isFlipped)}
@@ -370,3 +431,4 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
     </div>
   );
 };
+
