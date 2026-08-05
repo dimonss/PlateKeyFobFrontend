@@ -22,45 +22,6 @@ const REGION_NAMES: Record<string, string> = {
   '09': 'Иссык-Куль',
 };
 
-const LOGO_SVGS: Record<string, JSX.Element> = {
-  bmw: (
-    <svg viewBox="0 0 100 100" width="48" height="48">
-      <circle cx="50" cy="50" r="45" fill="#000" stroke="#fff" strokeWidth="4" />
-      <path d="M50 5 A45 45 0 0 1 95 50 H50 Z" fill="#0066B1" />
-      <path d="M50 50 H95 A45 45 0 0 1 50 95 Z" fill="#FFF" />
-      <path d="M50 50 V95 A45 45 0 0 1 5 50 Z" fill="#0066B1" />
-      <path d="M50 50 H5 A45 45 0 0 1 50 5 Z" fill="#FFF" />
-    </svg>
-  ),
-  toyota: (
-    <svg viewBox="0 0 100 60" width="54" height="36">
-      <ellipse cx="50" cy="30" rx="45" ry="25" fill="none" stroke="currentColor" strokeWidth="5" />
-      <ellipse cx="50" cy="30" rx="20" ry="24" fill="none" stroke="currentColor" strokeWidth="4" />
-      <ellipse cx="50" cy="18" rx="35" ry="12" fill="none" stroke="currentColor" strokeWidth="4" />
-    </svg>
-  ),
-  mercedes: (
-    <svg viewBox="0 0 100 100" width="48" height="48">
-      <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="5" />
-      <path d="M50 10 L60 50 L50 90 L40 50 Z" fill="currentColor" />
-      <path d="M50 50 L88 68 L50 50 L20 28 Z" fill="currentColor" />
-      <path d="M50 50 L12 68 L50 50 L80 28 Z" fill="currentColor" />
-    </svg>
-  ),
-  lexus: (
-    <svg viewBox="0 0 100 60" width="54" height="36">
-      <ellipse cx="50" cy="30" rx="44" ry="24" fill="none" stroke="currentColor" strokeWidth="5" />
-      <path d="M25 15 H65 L35 45 H75" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-    </svg>
-  ),
-  hyundai: (
-    <svg viewBox="0 0 100 60" width="54" height="36">
-      <ellipse cx="50" cy="30" rx="44" ry="24" fill="none" stroke="currentColor" strokeWidth="5" transform="rotate(-10 50 30)" />
-      <path d="M30 42 L42 18 M70 18 L58 42 M38 28 H62" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-    </svg>
-  ),
-  none: <></>,
-};
 
 /**
  * Parses user plate text into digits and letters according to KG plate standard.
@@ -398,35 +359,48 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                 color: config.material === 'black_matte' ? '#ffffff' : '#000000',
                 borderRadius: '8px',
                 border: `2.25px solid ${config.material === 'black_matte' ? '#ffffff' : '#1e1e1e'}`,
-                padding: '12px 16px',
+                padding: '8px 16px',
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '12px',
+                gap: '20px',
                 width: '100%',
                 height: '100%',
                 boxSizing: 'border-box',
                 textAlign: 'center',
               }}
             >
-              {config.backSideLogo && config.backSideLogo !== 'none' && LOGO_SVGS[config.backSideLogo] && (
+              {config.backSideLogo && config.backSideLogo !== 'none' && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {LOGO_SVGS[config.backSideLogo]}
+                  <img
+                    src={`${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`}
+                    alt={config.backSideLogo}
+                    style={{
+                      width: ['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo) ? '80px' : '64px',
+                      height: '52px',
+                      objectFit: 'contain',
+                      filter: config.material === 'black_matte' && config.backSideLogo !== 'bmw'
+                        ? 'brightness(0) invert(1)' 
+                        : 'none',
+                    }}
+                  />
                 </div>
               )}
-              <div
-                style={{
-                  fontSize: '1.2rem',
-                  fontFamily: "'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', var(--font-mono), sans-serif",
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  wordBreak: 'break-word',
-                  lineHeight: 1.2,
-                }}
-              >
-                {config.backSideText || '+996 555 123 456'}
-              </div>
+              {config.backSideText && config.backSideText.trim() && (
+                <div
+                  style={{
+                    fontSize: '1.85rem',
+                    fontFamily: "'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', var(--font-mono), sans-serif",
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {config.backSideText}
+                </div>
+              )}
             </div>
           </div>
         </div>

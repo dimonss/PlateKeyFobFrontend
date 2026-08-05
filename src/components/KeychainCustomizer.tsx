@@ -29,10 +29,14 @@ const MATERIALS = [
 const CAR_LOGOS = [
   { id: 'none', label: 'Без лого' },
   { id: 'bmw', label: 'BMW' },
-  { id: 'toyota', label: 'Toyota' },
   { id: 'mercedes', label: 'Mercedes' },
+  { id: 'toyota', label: 'Toyota' },
   { id: 'lexus', label: 'Lexus' },
+  { id: 'honda', label: 'Honda' },
   { id: 'hyundai', label: 'Hyundai' },
+  { id: 'kia', label: 'KIA' },
+  { id: 'audi', label: 'Audi' },
+  { id: 'chevrolet', label: 'Chevrolet' },
 ];
 
 export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderClick }) => {

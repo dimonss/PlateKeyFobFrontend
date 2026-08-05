@@ -111,8 +111,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
   };
 
-  // Helper to generate dynamic high-res canvas texture for 3D model
-  const createTextureCanvas = (isBack: boolean) => {
+  const createTextureCanvas = (isBack: boolean, logoImg?: HTMLImageElement) => {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 420;
@@ -189,55 +188,40 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       ctx.strokeStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
       ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
 
-      // Draw Selected Car Logo on Back Side Canvas
-      if (config.backSideLogo && config.backSideLogo !== 'none') {
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2 - 45);
-        ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
-        ctx.strokeStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
-        ctx.lineWidth = 6;
+      const hasText = !!(config.backSideText && config.backSideText.trim());
 
-        if (config.backSideLogo === 'bmw') {
-          ctx.beginPath();
-          ctx.arc(0, 0, 50, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(-50, 0); ctx.lineTo(50, 0);
-          ctx.moveTo(0, -50); ctx.lineTo(0, 50);
-          ctx.stroke();
-        } else if (config.backSideLogo === 'toyota') {
-          ctx.beginPath();
-          ctx.ellipse(0, 0, 60, 35, 0, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.ellipse(0, 0, 25, 30, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        } else if (config.backSideLogo === 'mercedes') {
-          ctx.beginPath();
-          ctx.arc(0, 0, 50, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(0, -50); ctx.lineTo(0, 0);
-          ctx.moveTo(-43, 25); ctx.lineTo(0, 0);
-          ctx.moveTo(43, 25); ctx.lineTo(0, 0);
-          ctx.stroke();
-        } else if (config.backSideLogo === 'lexus') {
-          ctx.beginPath();
-          ctx.ellipse(0, 0, 60, 35, 0, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.font = 'bold 50px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('L', 0, 18);
+      // Draw Selected Car Logo on Back Side Canvas using preloaded Image
+      if (config.backSideLogo && config.backSideLogo !== 'none' && logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        ctx.save();
+        
+        // Center the logo if there's no text, otherwise shift it up
+        const yOffset = hasText ? -60 : 0;
+        ctx.translate(canvas.width / 2, canvas.height / 2 + yOffset);
+
+        let imgW = 125;
+        let imgH = 125;
+        if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
+          imgW = 170;
+          imgH = 110;
         }
 
+        if (config.material === 'black_matte' && config.backSideLogo !== 'bmw') {
+          // Invert logo colors on dark/matte black keychain if it's a silhouette logo
+          ctx.filter = 'brightness(0) invert(1)';
+        }
+
+        ctx.drawImage(logoImg, -imgW / 2, -imgH / 2, imgW, imgH);
+        ctx.filter = 'none';
         ctx.restore();
       }
 
       // Back side phone / custom text
-      ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
-      ctx.font = '800 84px Share Tech Mono, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(config.backSideText || '+996 555 123 456', canvas.width / 2, canvas.height - 75);
+      if (hasText) {
+        ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
+        ctx.font = '800 100px Share Tech Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(config.backSideText, canvas.width / 2, canvas.height - 70);
+      }
     }
 
     return canvas;
@@ -249,205 +233,228 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const width = container.clientWidth;
     const height = 360;
 
-    // Scene, Camera, Renderer
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
+    let active = true;
+    let cleanupFn: (() => void) | undefined;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, 0, 13);
-    cameraRef.current = camera;
+    const logoImg = new Image();
+    const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    rendererRef.current = renderer;
+    const startRender = () => {
+      if (!active) return;
 
-    container.innerHTML = '';
-    container.appendChild(renderer.domElement);
+      // Scene, Camera, Renderer
+      const scene = new THREE.Scene();
+      sceneRef.current = scene;
 
-    // Studio Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
-    scene.add(ambientLight);
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(0, 0, 13);
+      cameraRef.current = camera;
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.2);
-    dirLight1.position.set(6, 12, 8);
-    scene.add(dirLight1);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      rendererRef.current = renderer;
 
-    const dirLight2 = new THREE.DirectionalLight(0xffd700, 0.8);
-    dirLight2.position.set(-6, -6, -5);
-    scene.add(dirLight2);
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
 
-    // Create 3D Keychain Group
-    const group = new THREE.Group();
-    groupRef.current = group;
+      // Studio Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+      scene.add(ambientLight);
 
-    // Generate textures from canvas
-    const frontCanvas = createTextureCanvas(false);
-    const backCanvas = createTextureCanvas(true);
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.2);
+      dirLight1.position.set(6, 12, 8);
+      scene.add(dirLight1);
 
-    const frontTexture = new THREE.CanvasTexture(frontCanvas);
-    const backTexture = new THREE.CanvasTexture(backCanvas);
-    frontTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    backTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      const dirLight2 = new THREE.DirectionalLight(0xffd700, 0.8);
+      dirLight2.position.set(-6, -6, -5);
+      scene.add(dirLight2);
 
-    // Material properties
-    let metalness = 0.8;
-    let roughness = 0.2;
-    let baseColor = 0xffffff;
+      // Create 3D Keychain Group
+      const group = new THREE.Group();
+      groupRef.current = group;
 
-    if (config.material === 'gold_edge') {
-      baseColor = 0xffd700;
-      metalness = 0.9;
-      roughness = 0.12;
-    } else if (config.material === 'black_matte') {
-      baseColor = 0x1f2937;
-      metalness = 0.2;
-      roughness = 0.7;
-    } else if (config.material === 'carbon') {
-      baseColor = 0x27272a;
-      metalness = 0.4;
-      roughness = 0.35;
+      // Generate textures from canvas
+      const frontCanvas = createTextureCanvas(false);
+      const backCanvas = createTextureCanvas(true, logoImg);
+
+      const frontTexture = new THREE.CanvasTexture(frontCanvas);
+      const backTexture = new THREE.CanvasTexture(backCanvas);
+      frontTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      backTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      // Material properties
+      let metalness = 0.8;
+      let roughness = 0.2;
+      let baseColor = 0xffffff;
+
+      if (config.material === 'gold_edge') {
+        baseColor = 0xffd700;
+        metalness = 0.9;
+        roughness = 0.12;
+      } else if (config.material === 'black_matte') {
+        baseColor = 0x1f2937;
+        metalness = 0.2;
+        roughness = 0.7;
+      } else if (config.material === 'carbon') {
+        baseColor = 0x27272a;
+        metalness = 0.4;
+        roughness = 0.35;
+      }
+
+      const sideMaterial = new THREE.MeshStandardMaterial({
+        color: baseColor,
+        metalness,
+        roughness,
+      });
+
+      const frontMaterial = new THREE.MeshStandardMaterial({
+        map: frontTexture,
+        metalness: 0.3,
+        roughness: 0.2,
+      });
+
+      const backMaterial = new THREE.MeshStandardMaterial({
+        map: backTexture,
+        metalness: 0.3,
+        roughness: 0.2,
+      });
+
+      // Box Geometry: Width=6.8, Height=2.8 (Authentic 4.7:1 license plate proportion), Depth=0.22
+      const materials = [
+        sideMaterial, // right
+        sideMaterial, // left
+        sideMaterial, // top
+        sideMaterial, // bottom
+        frontMaterial, // front
+        backMaterial, // back
+      ];
+
+      const plateGeo = new THREE.BoxGeometry(6.8, 2.8, 0.22);
+      const plateMesh = new THREE.Mesh(plateGeo, materials);
+      group.add(plateMesh);
+
+      // Top Keyring Attach Loop
+      const ringGeo = new THREE.TorusGeometry(0.5, 0.08, 16, 32);
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: config.material === 'gold_edge' ? 0xffd700 : 0xd1d5db,
+        metalness: 0.9,
+        roughness: 0.1,
+      });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.position.set(0, 1.85, 0);
+      group.add(ringMesh);
+
+      scene.add(group);
+
+      // Mouse Drag Rotation Logic
+      let isDragging = false;
+      let previousMousePosition = { x: 0, y: 0 };
+
+      const onMouseDown = (e: MouseEvent) => {
+        isDragging = true;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      };
+
+      const onMouseMove = (e: MouseEvent) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - previousMousePosition.x;
+        const deltaY = e.clientY - previousMousePosition.y;
+
+        group.rotation.y += deltaX * 0.01;
+        group.rotation.x += deltaY * 0.01;
+
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+      };
+
+      const domElement = renderer.domElement;
+      domElement.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      // Touch support
+      const onTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const deltaX = e.touches[0].clientX - previousMousePosition.x;
+        const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+        group.rotation.y += deltaX * 0.01;
+        group.rotation.x += deltaY * 0.01;
+
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      };
+
+      const onTouchEnd = () => {
+        isDragging = false;
+      };
+
+      domElement.addEventListener('touchstart', onTouchStart);
+      window.addEventListener('touchmove', onTouchMove);
+      window.addEventListener('touchend', onTouchEnd);
+
+      // Responsive Canvas Resize Observer
+      const resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const newWidth = entry.contentRect.width;
+          if (newWidth > 0 && cameraRef.current && rendererRef.current) {
+            cameraRef.current.aspect = newWidth / height;
+            cameraRef.current.updateProjectionMatrix();
+            rendererRef.current.setSize(newWidth, height);
+          }
+        }
+      });
+      resizeObserver.observe(container);
+
+      // Animation Loop
+      let animationFrameId: number;
+      const animate = () => {
+        animationFrameId = requestAnimationFrame(animate);
+
+        if (autoRotate && !isDragging) {
+          group.rotation.y += 0.015;
+        }
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+
+      cleanupFn = () => {
+        resizeObserver.disconnect();
+        cancelAnimationFrame(animationFrameId);
+        domElement.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        domElement.removeEventListener('touchstart', onTouchStart);
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        renderer.dispose();
+      };
+    };
+
+    if (hasLogo) {
+      logoImg.src = `${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`;
+      logoImg.onload = startRender;
+      logoImg.onerror = startRender;
+    } else {
+      startRender();
     }
 
-    const sideMaterial = new THREE.MeshStandardMaterial({
-      color: baseColor,
-      metalness,
-      roughness,
-    });
-
-    const frontMaterial = new THREE.MeshStandardMaterial({
-      map: frontTexture,
-      metalness: 0.3,
-      roughness: 0.2,
-    });
-
-    const backMaterial = new THREE.MeshStandardMaterial({
-      map: backTexture,
-      metalness: 0.3,
-      roughness: 0.2,
-    });
-
-    // Box Geometry: Width=6.8, Height=2.8 (Authentic 4.7:1 license plate proportion), Depth=0.22
-    const materials = [
-      sideMaterial, // right
-      sideMaterial, // left
-      sideMaterial, // top
-      sideMaterial, // bottom
-      frontMaterial, // front
-      backMaterial, // back
-    ];
-
-    const plateGeo = new THREE.BoxGeometry(6.8, 2.8, 0.22);
-    const plateMesh = new THREE.Mesh(plateGeo, materials);
-    group.add(plateMesh);
-
-    // Top Keyring Attach Loop
-    const ringGeo = new THREE.TorusGeometry(0.5, 0.08, 16, 32);
-    const ringMat = new THREE.MeshStandardMaterial({
-      color: config.material === 'gold_edge' ? 0xffd700 : 0xd1d5db,
-      metalness: 0.9,
-      roughness: 0.1,
-    });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.position.set(0, 1.85, 0);
-    group.add(ringMesh);
-
-    scene.add(group);
-
-    // Mouse Drag Rotation Logic
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-
-    const onMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - previousMousePosition.x;
-      const deltaY = e.clientY - previousMousePosition.y;
-
-      group.rotation.y += deltaX * 0.01;
-      group.rotation.x += deltaY * 0.01;
-
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseUp = () => {
-      isDragging = false;
-    };
-
-    const domElement = renderer.domElement;
-    domElement.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-
-    // Touch support
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        isDragging = true;
-        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isDragging || e.touches.length !== 1) return;
-      const deltaX = e.touches[0].clientX - previousMousePosition.x;
-      const deltaY = e.touches[0].clientY - previousMousePosition.y;
-
-      group.rotation.y += deltaX * 0.01;
-      group.rotation.x += deltaY * 0.01;
-
-      previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
-
-    const onTouchEnd = () => {
-      isDragging = false;
-    };
-
-    domElement.addEventListener('touchstart', onTouchStart);
-    window.addEventListener('touchmove', onTouchMove);
-    window.addEventListener('touchend', onTouchEnd);
-
-    // Responsive Canvas Resize Observer
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const newWidth = entry.contentRect.width;
-        if (newWidth > 0 && cameraRef.current && rendererRef.current) {
-          cameraRef.current.aspect = newWidth / height;
-          cameraRef.current.updateProjectionMatrix();
-          rendererRef.current.setSize(newWidth, height);
-        }
-      }
-    });
-    resizeObserver.observe(container);
-
-    // Animation Loop
-    let animationFrameId: number;
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-
-      if (autoRotate && !isDragging) {
-        group.rotation.y += 0.015;
-      }
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
     return () => {
-      resizeObserver.disconnect();
-      cancelAnimationFrame(animationFrameId);
-      domElement.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      domElement.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      renderer.dispose();
+      active = false;
+      if (cleanupFn) cleanupFn();
       sceneRef.current = null;
       groupRef.current = null;
       rendererRef.current = null;
