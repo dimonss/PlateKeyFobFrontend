@@ -164,7 +164,7 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
         textAnchor="middle"
         fontSize="56"
         fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
-        fontWeight="900"
+        fontWeight="600"
         fill="#1E1E1E"
         letterSpacing="-0.5"
         filter="url(#embossFilter)"
@@ -177,8 +177,8 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
         {/* Crimson Red Field */}
         <rect width="40" height="26" fill="#E11D48" rx="1.5" />
 
-        {/* Sun Disk & 40 Curved Rays */}
-        <g transform="translate(20, 13)">
+        {/* Sun Disk & 40 Curved Rays (Scaled down to ~70%) */}
+        <g transform="translate(20, 13) scale(0.6)">
           {/* 40 Rays */}
           {Array.from({ length: 40 }).map((_, i) => {
             const angle = (i * 360) / 40;
@@ -218,7 +218,7 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
         y="96"
         fontSize="30"
         fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif"
-        fontWeight="900"
+        fontWeight="700"
         fill="#1E1E1E"
         letterSpacing="0.5"
         filter="url(#embossFilter)"
@@ -239,7 +239,7 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
           <tspan
             fontSize="92"
             fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
-            fontWeight="900"
+            fontWeight="600"
             fill="#1E1E1E"
             letterSpacing="0"
           >
@@ -252,7 +252,7 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
               dx="24"
               fontSize="76"
               fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
-              fontWeight="900"
+              fontWeight="600"
               fill="#1E1E1E"
               letterSpacing="0"
             >
@@ -268,7 +268,7 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
           textAnchor="middle"
           fontSize={parsed.digits.length > 8 ? '54' : parsed.digits.length > 6 ? '70' : '86'}
           fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace"
-          fontWeight="900"
+          fontWeight="600"
           fill="#1E1E1E"
           letterSpacing="2"
           filter="url(#embossFilter)"
@@ -332,6 +332,7 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
           {/* FRONT SIDE */}
           <div
             style={{
+              position: 'relative',
               width: '100%',
               borderRadius: '10px',
               padding: '2px',
@@ -343,15 +344,14 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '-18px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '24px',
-                height: '24px',
+                top: '7px',
+                right: '7px',
+                width: '18px',
+                height: '18px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #94a3b8, #cbd5e1, #475569)',
-                border: '3px solid #1e293b',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                background: 'rgba(12, 14, 18, 0.75)',
+                border: '2px solid rgba(30, 30, 30, 0.8)',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.2)',
                 zIndex: 5,
               }}
             />
@@ -375,6 +375,21 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
               ...getMaterialStyle(),
             }}
           >
+            {/* Key Chain Ring Hole (Positioned on the top left when flipped so it aligns with front top right) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '6px',
+                left: '8px',
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                background: 'rgba(12, 14, 18, 0.75)',
+                border: '2px solid rgba(30, 30, 30, 0.8)',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.2)',
+                zIndex: 5,
+              }}
+            />
             {/* Inner Surface Back */}
             <div
               style={{
