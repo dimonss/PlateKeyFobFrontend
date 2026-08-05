@@ -206,7 +206,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
               <div className="input-group">
                 <label className="input-label">Город:</label>
                 <select className="input-field" value={city} onChange={e => setCity(e.target.value)}>

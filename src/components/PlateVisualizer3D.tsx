@@ -411,6 +411,19 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     window.addEventListener('touchmove', onTouchMove);
     window.addEventListener('touchend', onTouchEnd);
 
+    // Responsive Canvas Resize Observer
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const newWidth = entry.contentRect.width;
+        if (newWidth > 0 && cameraRef.current && rendererRef.current) {
+          cameraRef.current.aspect = newWidth / height;
+          cameraRef.current.updateProjectionMatrix();
+          rendererRef.current.setSize(newWidth, height);
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
     // Animation Loop
     let animationFrameId: number;
     const animate = () => {
@@ -426,6 +439,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     animate();
 
     return () => {
+      resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
       domElement.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);

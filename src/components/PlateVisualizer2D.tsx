@@ -210,12 +210,12 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  paddingRight: '8px',
+                  paddingRight: '6px',
                   paddingLeft: '4px',
                   paddingTop: '2px',
                   paddingBottom: '2px',
                   borderRight: '2.5px solid #1e1e1e',
-                  minWidth: '84px',
+                  minWidth: 'clamp(68px, 20vw, 84px)',
                   userSelect: 'none',
                   flexShrink: 0,
                 }}
@@ -223,7 +223,7 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                 {/* Region Code (e.g. "01") */}
                 <div
                   style={{
-                    fontSize: '2.4rem',
+                    fontSize: 'clamp(1.8rem, 6vw, 2.4rem)',
                     fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', var(--font-mono), monospace",
                     fontWeight: 900,
                     color: '#1e1e1e',
@@ -242,14 +242,14 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '5px',
+                    gap: '4px',
                     marginBottom: '2px',
                   }}
                 >
-                  <KyrgyzFlagSVG width={34} height={22} />
+                  <KyrgyzFlagSVG width={30} height={20} />
                   <span
                     style={{
-                      fontSize: '1.25rem',
+                      fontSize: 'clamp(1rem, 3.5vw, 1.25rem)',
                       fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', 'Inter', sans-serif",
                       fontWeight: 900,
                       color: '#1e1e1e',
@@ -270,19 +270,21 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  paddingLeft: '10px',
-                  paddingRight: '6px',
+                  paddingLeft: '6px',
+                  paddingRight: '4px',
                   userSelect: 'none',
                   overflow: 'hidden',
                 }}
               >
                 <div
                   style={{
-                    fontSize: (config.plateNumber || '').length > 8 ? '2.4rem' : '3.3rem',
+                    fontSize: (config.plateNumber || '').length > 8 
+                      ? 'clamp(1.5rem, 5vw, 2.4rem)' 
+                      : 'clamp(2rem, 7.5vw, 3.3rem)',
                     fontFamily: "'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', var(--font-mono), monospace",
                     fontWeight: 900,
                     color: '#1e1e1e',
-                    letterSpacing: '0.07em',
+                    letterSpacing: '0.05em',
                     lineHeight: 1,
                     whiteSpace: 'nowrap',
                     textShadow: '0.5px 0.5px 0px rgba(0,0,0,0.2)',

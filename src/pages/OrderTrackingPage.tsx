@@ -56,16 +56,16 @@ export const OrderTrackingPage: React.FC = () => {
           Введите номер Вашего заказа (например: <strong>KG-849201</strong>) для проверки статуса и даты воскресной доставки.
         </p>
 
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <input
             type="text"
             className="input-field"
             placeholder="Введите номер заказа KG-XXXXXX"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{ fontSize: '1rem' }}
+            style={{ fontSize: '1rem', flex: 1, minWidth: '200px' }}
           />
-          <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ whiteSpace: 'nowrap' }}>
+          <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ whiteSpace: 'nowrap', minHeight: '44px' }}>
             {isLoading ? 'Поиск...' : 'Найти Заказ'}
           </button>
         </form>

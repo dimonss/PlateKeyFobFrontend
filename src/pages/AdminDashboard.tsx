@@ -100,41 +100,41 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Analytics Cards */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-          <div className="glass-elevated" style={{ padding: '20px', borderLeft: '4px solid var(--primary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '12px', marginBottom: '24px' }}>
+          <div className="glass-elevated" style={{ padding: '16px', borderLeft: '4px solid var(--primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
               <span>Всего заказов</span>
-              <Package size={20} color="var(--primary)" />
+              <Package size={18} color="var(--primary)" />
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '8px' }}>{stats.totalOrders}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px' }}>{stats.totalOrders}</div>
           </div>
 
-          <div className="glass-elevated" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+          <div className="glass-elevated" style={{ padding: '16px', borderLeft: '4px solid #10b981' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
               <span>Выручка</span>
-              <DollarSign size={20} color="#10b981" />
+              <DollarSign size={18} color="#10b981" />
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '8px', color: '#10b981' }}>
-              {stats.totalRevenue} <span style={{ fontSize: '1rem' }}>сом</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#10b981' }}>
+              {stats.totalRevenue} <span style={{ fontSize: '0.85rem' }}>сом</span>
             </div>
           </div>
 
-          <div className="glass-elevated" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+          <div className="glass-elevated" style={{ padding: '16px', borderLeft: '4px solid #f59e0b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
               <span>В производстве</span>
-              <Clock size={20} color="#f59e0b" />
+              <Clock size={18} color="#f59e0b" />
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '8px', color: '#f59e0b' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#f59e0b' }}>
               {stats.inProductionCount + stats.pendingCount}
             </div>
           </div>
 
-          <div className="glass-elevated" style={{ padding: '20px', borderLeft: '4px solid #a855f7' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+          <div className="glass-elevated" style={{ padding: '16px', borderLeft: '4px solid #a855f7' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
               <span>На воскресный выезд</span>
-              <Truck size={20} color="#a855f7" />
+              <Truck size={18} color="#a855f7" />
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, marginTop: '8px', color: '#c084fc' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#c084fc' }}>
               {stats.readyForSundayCount}
             </div>
           </div>
@@ -142,13 +142,13 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* Filter Toolbar */}
-      <div className="glass-elevated" style={{ padding: '20px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1 }}>
+      <div className="glass-elevated" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1, width: '100%' }}>
           
           {/* Status Filter */}
           <select
             className="input-field"
-            style={{ width: 'auto', minWidth: '180px' }}
+            style={{ width: 'auto', minWidth: '150px', flex: 1 }}
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
           >
@@ -161,7 +161,7 @@ export const AdminDashboard: React.FC = () => {
           </select>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+          <div style={{ position: 'relative', flex: 2, minWidth: '200px' }}>
             <input
               type="text"
               className="input-field"
@@ -176,8 +176,8 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Orders List Table */}
-      <div className="glass-elevated" style={{ padding: '0', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
+      <div className="glass-elevated" style={{ padding: '0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ minWidth: '700px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
             <thead>
               <tr style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>

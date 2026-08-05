@@ -60,27 +60,27 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
   const totalPrice = calculatePrice();
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }} className="customizer-grid">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }} className="customizer-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px', alignItems: 'start' }}>
         
         {/* LEFT COLUMN: Visualizer Preview */}
         <div className="glass-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           
           {/* Mode Switcher */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '12px', marginBottom: '20px', width: '100%', maxWidth: '320px', justifyContent: 'center' }}>
             <button
               onClick={() => setViewMode('2d')}
               className={`btn ${viewMode === '2d' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+              style={{ padding: '8px 14px', fontSize: '0.85rem', flex: 1, minHeight: '38px' }}
             >
               <Eye size={16} /> 2D Вид
             </button>
             <button
               onClick={() => setViewMode('3d')}
               className={`btn ${viewMode === '3d' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+              style={{ padding: '8px 14px', fontSize: '0.85rem', flex: 1, minHeight: '38px' }}
             >
-              <Box size={16} /> Интерактивный 3D
+              <Box size={16} /> 3D Интерактив
             </button>
           </div>
 
@@ -92,7 +92,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
           )}
 
           {/* Quick Presets */}
-          <div style={{ marginTop: '24px', width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+          <div style={{ marginTop: '20px', width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
               Быстрые популярные номера:
             </span>
@@ -101,7 +101,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
                 <button
                   key={preset}
                   className="btn btn-secondary"
-                  style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+                  style={{ padding: '4px 10px', fontSize: '0.75rem', minHeight: '32px' }}
                   onClick={() => {
                     const parts = preset.split(' ');
                     if (parts.length >= 2) {
@@ -119,8 +119,8 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
         </div>
 
         {/* RIGHT COLUMN: Customization Controls */}
-        <div className="glass-elevated" style={{ padding: '28px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '20px', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="glass-elevated" style={{ padding: '24px' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '16px', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Sparkles color="#f43f5e" size={22} /> Кастомизация Брелка
           </h2>
 
@@ -146,7 +146,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
             <input
               type="text"
               className="input-field plate-font"
-              style={{ fontSize: '1.2rem', textTransform: 'uppercase' }}
+              style={{ fontSize: '1.15rem', textTransform: 'uppercase' }}
               value={config.plateNumber}
               maxLength={12}
               placeholder="Например: 777 AAA или B 1234 A"
@@ -171,13 +171,13 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
             <label className="input-label" style={{ marginTop: '12px', display: 'block' }}>
               Марка автомобиля (Логотип):
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(85px, 1fr))', gap: '8px', marginTop: '6px' }}>
               {CAR_LOGOS.map(logo => (
                 <button
                   key={logo.id}
                   type="button"
                   className={`btn ${config.backSideLogo === logo.id ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px', fontSize: '0.8rem' }}
+                  style={{ padding: '6px 8px', fontSize: '0.78rem', minHeight: '36px' }}
                   onClick={() => setConfig(prev => ({ ...prev, backSideLogo: logo.id }))}
                 >
                   {logo.label}
@@ -189,7 +189,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
           {/* Step 4: Material Selection */}
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px' }}>
             <label className="input-label">4. Материал и Оформление брелка:</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '8px' }}>
               {MATERIALS.map(mat => {
                 const isSelected = config.material === mat.id;
                 return (
@@ -197,7 +197,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
                     key={mat.id}
                     onClick={() => setConfig(prev => ({ ...prev, material: mat.id as PlateConfig['material'] }))}
                     style={{
-                      padding: '12px',
+                      padding: '10px 12px',
                       borderRadius: '12px',
                       background: isSelected ? 'rgba(225, 29, 72, 0.12)' : 'rgba(0,0,0,0.25)',
                       border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
@@ -208,17 +208,18 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
                       justifyContent: 'space-between',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span
                         style={{
-                          width: '18px',
-                          height: '18px',
+                          width: '16px',
+                          height: '16px',
                           borderRadius: '50%',
                           background: mat.color,
                           border: '1px solid rgba(255,255,255,0.4)',
+                          flexShrink: 0,
                         }}
                       />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{mat.name}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{mat.name}</span>
                     </div>
                     {isSelected && <Check size={16} color="var(--primary)" />}
                   </div>
@@ -228,16 +229,16 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
           </div>
 
           {/* Price Summary & Order Button */}
-          <div style={{ marginTop: '28px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Итоговая стоимость брелка:</span>
-                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Итоговая стоимость брелка:</span>
+                <h3 style={{ fontSize: '1.7rem', fontWeight: 900, color: 'var(--text-main)', fontFamily: 'var(--font-display)', margin: 0 }}>
                   {totalPrice} <span style={{ fontSize: '1rem', color: '#f43f5e' }}>сом</span>
                 </h3>
               </div>
-              <div style={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <ShieldCheck size={16} color="#10b981" style={{ display: 'inline', verticalAlign: 'middle' }} /> Гарантия качества
+              <div style={{ textAlign: 'left', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <ShieldCheck size={15} color="#10b981" style={{ display: 'inline', verticalAlign: 'middle' }} /> Гарантия качества
                 <br />
                 Доставка: <strong>По Воскресеньям</strong>
               </div>
@@ -245,7 +246,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
 
             <button
               className="btn btn-primary"
-              style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
+              style={{ width: '100%', padding: '14px', fontSize: '1.05rem', minHeight: '48px' }}
               onClick={() => onOrderClick(config, totalPrice)}
             >
               Оформить Заказ за {totalPrice} сом
