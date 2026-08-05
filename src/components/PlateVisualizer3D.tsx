@@ -26,6 +26,12 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
 
+  const prevConfigRef = useRef<PlateConfig | null>(null);
+  const lastInteractionTimeRef = useRef<number>(0);
+  const focusedSideRef = useRef<'front' | 'back' | null>(null);
+  const currentRotationYRef = useRef<number>(0);
+  const currentRotationXRef = useRef<number>(0.1);
+
   const drawRoundedRect = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -389,6 +395,21 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   };
 
   useEffect(() => {
+    if (prevConfigRef.current) {
+      const prev = prevConfigRef.current;
+      const frontChanged = prev.plateNumber !== config.plateNumber || prev.regionCode !== config.regionCode;
+      const backChanged = prev.backSideText !== config.backSideText || prev.backSideLogo !== config.backSideLogo;
+
+      if (frontChanged) {
+        focusedSideRef.current = 'front';
+        lastInteractionTimeRef.current = Date.now();
+      } else if (backChanged) {
+        focusedSideRef.current = 'back';
+        lastInteractionTimeRef.current = Date.now();
+      }
+    }
+    prevConfigRef.current = config;
+
     if (!containerRef.current) return;
     const container = containerRef.current;
     const width = container.clientWidth;
@@ -447,6 +468,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       // Create 3D Keychain Group
       const group = new THREE.Group();
       groupRef.current = group;
+
+      // Restore rotation from refs
+      group.rotation.y = currentRotationYRef.current;
+      group.rotation.x = currentRotationXRef.current;
 
       // Generate textures from canvas
       const frontCanvas = createTextureCanvas(false, flagImg);
@@ -635,8 +660,40 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
 
-        if (autoRotate && !isDragging) {
-          group.rotation.y += 0.015;
+        const now = Date.now();
+        const timeSinceInteraction = now - lastInteractionTimeRef.current;
+
+        if (isDragging) {
+          currentRotationYRef.current = group.rotation.y;
+          currentRotationXRef.current = group.rotation.x;
+          focusedSideRef.current = null;
+        } else {
+          if (focusedSideRef.current !== null && timeSinceInteraction < 5000) {
+            // Target orientation: 0 for front, Math.PI for back
+            const targetY = focusedSideRef.current === 'front' ? 0 : Math.PI;
+
+            // Gentle swaying using sine/cosine waves
+            const swayY = Math.sin(timeSinceInteraction * 0.001 * 2.5) * 0.12;
+            const swayX = Math.cos(timeSinceInteraction * 0.001 * 2.0) * 0.04;
+
+            const targetWithSwayY = targetY + swayY;
+            const targetWithSwayX = 0.1 + swayX;
+
+            // Interpolate smoothly
+            let diffY = targetWithSwayY - group.rotation.y;
+            diffY = Math.atan2(Math.sin(diffY), Math.cos(diffY));
+            group.rotation.y += diffY * 0.08;
+            group.rotation.x += (targetWithSwayX - group.rotation.x) * 0.08;
+          } else {
+            if (autoRotate) {
+              group.rotation.y += 0.015;
+            }
+            // Smoothly return X to default tilt
+            group.rotation.x += (0.1 - group.rotation.x) * 0.05;
+          }
+
+          currentRotationYRef.current = group.rotation.y;
+          currentRotationXRef.current = group.rotation.x;
         }
 
         renderer.render(scene, camera);

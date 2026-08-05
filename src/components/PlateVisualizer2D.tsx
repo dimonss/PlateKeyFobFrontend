@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RotateCw } from 'lucide-react';
 
 export interface PlateConfig {
@@ -223,6 +223,22 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
 
 export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  const prevConfigRef = useRef<PlateConfig | null>(null);
+
+  useEffect(() => {
+    if (prevConfigRef.current) {
+      const prev = prevConfigRef.current;
+      const frontChanged = prev.plateNumber !== config.plateNumber || prev.regionCode !== config.regionCode;
+      const backChanged = prev.backSideText !== config.backSideText || prev.backSideLogo !== config.backSideLogo;
+
+      if (frontChanged) {
+        setIsFlipped(false);
+      } else if (backChanged) {
+        setIsFlipped(true);
+      }
+    }
+    prevConfigRef.current = config;
+  }, [config]);
 
   // Material border styling for Keychain frame
   const getMaterialStyle = () => {
