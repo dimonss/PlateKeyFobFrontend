@@ -20,7 +20,7 @@ const REGIONS = [
 ];
 
 const MATERIALS = [
-  { id: 'chrome', name: 'Хром Сталь', price: 500, color: '#e2e8f0' },
+  { id: 'chrome', name: 'Пластик', price: 500, color: '#e2e8f0' },
   { id: 'black_matte', name: 'Матовый Магнит', price: 500, color: '#111827' },
   { id: 'gold_edge', name: 'Золотая Кайма', price: 650, color: '#f59e0b' },
   { id: 'carbon', name: 'Карбоновый Микс', price: 700, color: '#374151' },
@@ -186,26 +186,33 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
             </div>
           </div>
 
-          {/* Step 4: Material Selection */}
+          {/* Step 4: Material Selection (Disabled - Plastic by default) */}
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px' }}>
-            <label className="input-label">4. Материал и Оформление брелка:</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: '8px' }}>
+              <label className="input-label" style={{ margin: 0 }}>4. Материал и Оформление брелка:</label>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                (По умолчанию: Пластик)
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
               {MATERIALS.map(mat => {
-                const isSelected = config.material === mat.id;
+                const isDefault = mat.id === 'chrome'; // Хром Сталь / Пластик по умолчанию
                 return (
                   <div
                     key={mat.id}
-                    onClick={() => setConfig(prev => ({ ...prev, material: mat.id as PlateConfig['material'] }))}
                     style={{
                       padding: '10px 12px',
                       borderRadius: '12px',
-                      background: isSelected ? 'rgba(225, 29, 72, 0.12)' : 'rgba(0,0,0,0.25)',
-                      border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
-                      cursor: 'pointer',
+                      background: isDefault ? 'rgba(225, 29, 72, 0.12)' : 'rgba(0,0,0,0.15)',
+                      border: `2px solid ${isDefault ? 'var(--primary)' : 'var(--border-color)'}`,
+                      opacity: isDefault ? 1 : 0.45,
+                      cursor: 'not-allowed',
+                      pointerEvents: 'none',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      userSelect: 'none',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -221,7 +228,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
                       />
                       <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{mat.name}</span>
                     </div>
-                    {isSelected && <Check size={16} color="var(--primary)" />}
+                    {isDefault && <Check size={16} color="var(--primary)" />}
                   </div>
                 );
               })}

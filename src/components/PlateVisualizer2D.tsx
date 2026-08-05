@@ -368,10 +368,11 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
               left: 0,
               width: '100%',
               height: '100%',
-              borderRadius: '16px',
-              padding: '10px',
+              borderRadius: '10px',
+              padding: '2px',
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
+              boxSizing: 'border-box',
               ...getMaterialStyle(),
             }}
           >
@@ -379,8 +380,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '6px',
-                left: '8px',
+                top: '7px',
+                left: '7px',
                 width: '18px',
                 height: '18px',
                 borderRadius: '50%',
@@ -395,30 +396,33 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
               style={{
                 background: config.material === 'black_matte' ? '#111827' : '#ffffff',
                 color: config.material === 'black_matte' ? '#ffffff' : '#000000',
-                borderRadius: '12px',
-                border: `2.5px solid ${config.material === 'black_matte' ? '#ffffff' : '#1e1e1e'}`,
-                padding: '10px',
+                borderRadius: '8px',
+                border: `2.25px solid ${config.material === 'black_matte' ? '#ffffff' : '#1e1e1e'}`,
+                padding: '12px 16px',
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: '12px',
+                width: '100%',
                 height: '100%',
-                minHeight: '106px',
+                boxSizing: 'border-box',
                 textAlign: 'center',
               }}
             >
               {config.backSideLogo && config.backSideLogo !== 'none' && LOGO_SVGS[config.backSideLogo] && (
-                <div style={{ marginBottom: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {LOGO_SVGS[config.backSideLogo]}
                 </div>
               )}
               <div
                 style={{
-                  fontSize: '1.25rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 800,
+                  fontSize: '1.2rem',
+                  fontFamily: "'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', var(--font-mono), sans-serif",
+                  fontWeight: 700,
                   letterSpacing: '0.05em',
                   wordBreak: 'break-word',
+                  lineHeight: 1.2,
                 }}
               >
                 {config.backSideText || '+996 555 123 456'}
