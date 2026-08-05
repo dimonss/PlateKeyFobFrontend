@@ -26,110 +26,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
 
-  // Helper to draw realistic Kyrgyz Flag on 2D Context
-  const drawKyrgyzFlagOnCanvas = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
-    ctx.save();
-
-    // Rounded Flag border clip
-    ctx.beginPath();
-    if (typeof ctx.roundRect === 'function') {
-      ctx.roundRect(x, y, w, h, 4);
-    } else {
-      ctx.rect(x, y, w, h);
-    }
-    ctx.clip();
-
-    // Crimson Red Field
-    ctx.fillStyle = '#E11D48';
-    ctx.fillRect(x, y, w, h);
-
-    // Sun emblem center
-    const cx = x + w / 2;
-    const cy = y + h / 2;
-    
-    // Scale factor to match the SVG dimensions (base h = 26, scaled by 0.6 group scale)
-    const scale = (h / 26) * 0.6;
-
-    // 40 Sun Rays
-    ctx.fillStyle = '#FBBF24';
-    for (let i = 0; i < 40; i++) {
-      const angle = (i * Math.PI * 2) / 40;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(angle);
-      
-      ctx.beginPath();
-      // SVG path: M 0 -7.2 C 0.8 -9.2, 1.6 -10.2, 0 -11.6 C -1.6 -10.2, -0.8 -9.2, 0 -7.2 Z
-      ctx.moveTo(0, -7.2 * scale);
-      ctx.bezierCurveTo(0.8 * scale, -9.2 * scale, 1.6 * scale, -10.2 * scale, 0, -11.6 * scale);
-      ctx.bezierCurveTo(-1.6 * scale, -10.2 * scale, -0.8 * scale, -9.2 * scale, 0, -7.2 * scale);
-      ctx.closePath();
-      ctx.fill();
-      
-      ctx.restore();
-    }
-
-    // Sun Disk Ring (radius = 6 in SVG)
-    ctx.beginPath();
-    ctx.arc(cx, cy, 6 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Inner Red Gap (radius = 4.8 in SVG)
-    ctx.fillStyle = '#E11D48';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 4.8 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Tunduk Arches (Yellow crossing lines)
-    ctx.strokeStyle = '#FBBF24';
-    ctx.lineWidth = 0.8 * scale;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // Horizontal curves
-    ctx.beginPath();
-    ctx.moveTo(cx - 3.6 * scale, cy - 2.6 * scale);
-    ctx.bezierCurveTo(cx - 1.3 * scale, cy - 0.8 * scale, cx + 1.3 * scale, cy - 0.8 * scale, cx + 3.6 * scale, cy - 2.6 * scale);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx - 4.2 * scale, cy);
-    ctx.bezierCurveTo(cx - 1.5 * scale, cy + 1.6 * scale, cx + 1.5 * scale, cy + 1.6 * scale, cx + 4.2 * scale, cy);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx - 3.6 * scale, cy + 2.6 * scale);
-    ctx.bezierCurveTo(cx - 1.3 * scale, cy + 0.8 * scale, cx + 1.3 * scale, cy + 0.8 * scale, cx + 3.6 * scale, cy + 2.6 * scale);
-    ctx.stroke();
-
-    // Vertical curves
-    ctx.beginPath();
-    ctx.moveTo(cx - 2.6 * scale, cy - 3.6 * scale);
-    ctx.bezierCurveTo(cx - 0.8 * scale, cy - 1.3 * scale, cx - 0.8 * scale, cy + 1.3 * scale, cx - 2.6 * scale, cy + 3.6 * scale);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 4.2 * scale);
-    ctx.bezierCurveTo(cx + 1.6 * scale, cy - 1.5 * scale, cx + 1.6 * scale, cy + 1.5 * scale, cx, cy + 4.2 * scale);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx + 2.6 * scale, cy - 3.6 * scale);
-    ctx.bezierCurveTo(cx + 0.8 * scale, cy - 1.3 * scale, cx + 0.8 * scale, cy + 1.3 * scale, cx + 2.6 * scale, cy + 3.6 * scale);
-    ctx.stroke();
-
-    ctx.restore();
-
-    // Border around flag
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 1;
-    if (typeof ctx.roundRect === 'function') {
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, 4);
-      ctx.stroke();
-    }
-  };
-
   const drawRoundedRect = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -251,7 +147,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     ctx.restore();
   };
 
-  const drawFrontSide = (ctx: CanvasRenderingContext2D) => {
+  const drawFrontSide = (ctx: CanvasRenderingContext2D, flagImg?: HTMLImageElement) => {
     drawOuterFrame(ctx, 1060, 244);
     drawInnerPlateBase(ctx, false);
     
@@ -292,7 +188,31 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const flagY = 154;
     const flagW = 80;
     const flagH = 52;
-    drawKyrgyzFlagOnCanvas(ctx, flagX, flagY, flagW, flagH);
+    
+    ctx.save();
+    // Clip to rounded rect matching 2D style rx=1.5 (scaled: 3)
+    ctx.beginPath();
+    drawRoundedRect(ctx, flagX, flagY, flagW, flagH, 3);
+    ctx.clip();
+    
+    if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
+      // Draw flag keeping 5:3 aspect ratio (width = 52 * 1.666 = 86.666, offset = (80 - 86.666) / 2 = -3.333)
+      ctx.drawImage(flagImg, flagX - 3.333, flagY, 86.666, flagH);
+    } else {
+      // Simple red fallback
+      ctx.fillStyle = '#E11D48';
+      ctx.fillRect(flagX, flagY, flagW, flagH);
+    }
+    ctx.restore();
+
+    // Flag border stroke matching 2D style stroke="rgba(0,0,0,0.2)"
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    drawRoundedRect(ctx, flagX, flagY, flagW, flagH, 3);
+    ctx.stroke();
+    ctx.restore();
     
     // "KG" text
     ctx.save();
@@ -452,7 +372,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     ctx.restore();
   };
 
-  const createTextureCanvas = (isBack: boolean, logoImg?: HTMLImageElement) => {
+  const createTextureCanvas = (isBack: boolean, flagImg?: HTMLImageElement, logoImg?: HTMLImageElement) => {
     const canvas = document.createElement('canvas');
     canvas.width = 1060;
     canvas.height = 244;
@@ -460,7 +380,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     if (!ctx) return canvas;
 
     if (!isBack) {
-      drawFrontSide(ctx);
+      drawFrontSide(ctx, flagImg);
     } else {
       drawBackSide(ctx, logoImg);
     }
@@ -478,7 +398,19 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     let cleanupFn: (() => void) | undefined;
 
     const logoImg = new Image();
+    const flagImg = new Image();
     const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
+
+    let loadedCount = 0;
+    let targetLoadCount = 1; // flag is always loaded
+    if (hasLogo) targetLoadCount++;
+
+    const checkLoaded = () => {
+      loadedCount++;
+      if (loadedCount === targetLoadCount) {
+        startRender();
+      }
+    };
 
     const startRender = () => {
       if (!active) return;
@@ -517,8 +449,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       groupRef.current = group;
 
       // Generate textures from canvas
-      const frontCanvas = createTextureCanvas(false);
-      const backCanvas = createTextureCanvas(true, logoImg);
+      const frontCanvas = createTextureCanvas(false, flagImg);
+      const backCanvas = createTextureCanvas(true, undefined, logoImg);
 
       const frontTexture = new THREE.CanvasTexture(frontCanvas);
       const backTexture = new THREE.CanvasTexture(backCanvas);
@@ -733,11 +665,13 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     if (hasLogo) {
       logoImg.src = `${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`;
-      logoImg.onload = startRender;
-      logoImg.onerror = startRender;
-    } else {
-      startRender();
+      logoImg.onload = checkLoaded;
+      logoImg.onerror = checkLoaded;
     }
+    
+    flagImg.src = `${import.meta.env.BASE_URL}flag.svg`;
+    flagImg.onload = checkLoaded;
+    flagImg.onerror = checkLoaded;
 
     return () => {
       active = false;

@@ -81,6 +81,11 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
         <filter id="embossFilter" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0.6" dy="0.6" stdDeviation="0.4" floodColor="#000000" floodOpacity="0.25" />
         </filter>
+
+        {/* Clip path for the Kyrgyz flag corner rounding */}
+        <clipPath id="flagClip">
+          <rect width="40" height="26" rx="1.5" />
+        </clipPath>
       </defs>
 
       {/* 1. License Plate Base Surface (520mm x 112mm) */}
@@ -135,39 +140,14 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
 
       {/* Flag of Kyrgyz Republic (40mm width x 26mm height, centered under left digit '0' at x=28) */}
       <g transform="translate(28, 72)">
-        {/* Crimson Red Field */}
-        <rect width="40" height="26" fill="#E11D48" rx="1.5" />
-
-        {/* Sun Disk & 40 Curved Rays (Scaled down to ~70%) */}
-        <g transform="translate(20, 13) scale(0.6)">
-          {/* 40 Rays */}
-          {Array.from({ length: 40 }).map((_, i) => {
-            const angle = (i * 360) / 40;
-            return (
-              <path
-                key={i}
-                d="M 0 -7.2 C 0.8 -9.2, 1.6 -10.2, 0 -11.6 C -1.6 -10.2, -0.8 -9.2, 0 -7.2 Z"
-                fill="#FBBF24"
-                transform={`rotate(${angle})`}
-              />
-            );
-          })}
-
-          {/* Center Sun Disk */}
-          <circle r="6" fill="#FBBF24" />
-          <circle r="4.8" fill="#E11D48" />
-
-          {/* Tunduk emblem */}
-          <g stroke="#FBBF24" strokeWidth="0.8" fill="none" strokeLinecap="round">
-            <path d="M -3.6 -2.6 C -1.3 -0.8, 1.3 -0.8, 3.6 -2.6" />
-            <path d="M -4.2 0 C -1.5 1.6, 1.5 1.6, 4.2 0" />
-            <path d="M -3.6 2.6 C -1.3 0.8, 1.3 0.8, 3.6 2.6" />
-
-            <path d="M -2.6 -3.6 C -0.8 -1.3, -0.8 1.3, -2.6 3.6" />
-            <path d="M 0 -4.2 C 1.6 -1.5, 1.6 1.5, 0 4.2" />
-            <path d="M 2.6 -3.6 C 0.8 -1.3, 0.8 1.3, 2.6 3.6" />
-          </g>
-        </g>
+        <image
+          href={`${import.meta.env.BASE_URL}flag.svg`}
+          x="-1.666"
+          y="0"
+          width="43.333"
+          height="26"
+          clipPath="url(#flagClip)"
+        />
 
         {/* Flag boundary border */}
         <rect width="40" height="26" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="1.5" />
