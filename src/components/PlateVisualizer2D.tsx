@@ -20,6 +20,7 @@ const REGION_NAMES: Record<string, string> = {
   '07': 'Талас',
   '08': 'Чуйская обл.',
   '09': 'Иссык-Куль',
+  '10': 'Легализованные ТС',
 };
 
 
@@ -373,8 +374,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                     src={`${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`}
                     alt={config.backSideLogo}
                     style={{
-                      width: ['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo) ? '80px' : '64px',
-                      height: '52px',
+                      width: ['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo) ? '118px' : '94px',
+                      height: '76px',
                       objectFit: 'contain',
                       filter: config.material === 'black_matte' && config.backSideLogo !== 'bmw'
                         ? 'brightness(0) invert(1)' 
@@ -386,12 +387,13 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
               {config.backSideText && config.backSideText.trim() && (
                 <div
                   style={{
-                    fontSize: '1.85rem',
+                    fontSize: '2.25rem',
                     fontFamily: "'Oswald', 'Outfit', 'Inter', var(--font-mono), sans-serif",
                     fontWeight: 700,
                     letterSpacing: '0.05em',
                     wordBreak: 'break-word',
                     lineHeight: 1.2,
+                    textAlign: 'center',
                   }}
                 >
                   {config.backSideText}

@@ -314,11 +314,11 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     ctx.shadowOffsetY = 1;
     ctx.shadowBlur = 0.8;
     
-    let maxW = 153;
-    let maxH = 125;
+    let maxW = 240;
+    let maxH = 190;
     if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
-      maxW = 192;
-      maxH = 120;
+      maxW = 300;
+      maxH = 180;
     }
 
     let logoW = maxW;
@@ -334,7 +334,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
     
     if (hasLogo && hasText) {
-      ctx.font = "700 72px 'Oswald', 'Outfit', 'Inter', sans-serif";
+      ctx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
       const textW = ctx.measureText(config.backSideText).width;
       const gap = 48;
       const totalW = logoW + gap + textW;
@@ -352,7 +352,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(config.backSideText, startX + logoW + gap, 122);
+      ctx.fillText(config.backSideText, startX + logoW + gap, 126);
       
     } else if (hasLogo) {
       const startX = 530 - logoW / 2;
@@ -367,10 +367,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       
     } else if (hasText) {
       ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
-      ctx.font = "700 72px 'Oswald', 'Outfit', 'Inter', sans-serif";
+      ctx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(config.backSideText, 530, 122);
+      ctx.fillText(config.backSideText, 530, 126);
     }
     ctx.restore();
     

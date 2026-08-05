@@ -17,6 +17,7 @@ const REGIONS = [
   { code: '07', name: 'Талас' },
   { code: '08', name: 'Чуйская обл.' },
   { code: '09', name: 'Иссык-Куль' },
+  { code: '10', name: 'Легализованные ТС' },
 ];
 
 const MATERIALS = [
