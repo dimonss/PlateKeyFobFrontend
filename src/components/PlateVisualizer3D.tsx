@@ -314,14 +314,27 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     ctx.shadowOffsetY = 1;
     ctx.shadowBlur = 0.8;
     
-    let logoW = 153;
-    let logoH = 125;
+    let maxW = 153;
+    let maxH = 125;
     if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
-      logoW = 192;
+      maxW = 192;
+      maxH = 120;
+    }
+
+    let logoW = maxW;
+    let logoH = maxH;
+
+    if (logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
+      const imgRatio = logoImg.naturalWidth / logoImg.naturalHeight;
+      if (maxW / maxH > imgRatio) {
+        logoW = maxH * imgRatio;
+      } else {
+        logoH = maxW / imgRatio;
+      }
     }
     
     if (hasLogo && hasText) {
-      ctx.font = "700 72px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', monospace";
+      ctx.font = "700 72px 'Oswald', 'Outfit', 'Inter', sans-serif";
       const textW = ctx.measureText(config.backSideText).width;
       const gap = 48;
       const totalW = logoW + gap + textW;
@@ -354,7 +367,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       
     } else if (hasText) {
       ctx.fillStyle = config.material === 'black_matte' ? '#ffffff' : '#1e1e1e';
-      ctx.font = "700 72px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', monospace";
+      ctx.font = "700 72px 'Oswald', 'Outfit', 'Inter', sans-serif";
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(config.backSideText, 530, 122);

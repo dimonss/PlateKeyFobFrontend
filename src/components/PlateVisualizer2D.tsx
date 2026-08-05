@@ -387,7 +387,7 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                 <div
                   style={{
                     fontSize: '1.85rem',
-                    fontFamily: "'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', var(--font-mono), sans-serif",
+                    fontFamily: "'Oswald', 'Outfit', 'Inter', var(--font-mono), sans-serif",
                     fontWeight: 700,
                     letterSpacing: '0.05em',
                     wordBreak: 'break-word',
