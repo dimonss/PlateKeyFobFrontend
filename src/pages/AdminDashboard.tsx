@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock } from 'lucide-react';
+import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock, Eye, Box } from 'lucide-react';
 import { fetchAdminOrders, updateOrderStatusApi, fetchAdminStats, type AdminStats } from '../api/admin';
 import type { OrderItem } from '../api/orders';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { PlateVisualizer2D } from '../components/PlateVisualizer2D';
+import { PlateVisualizer3D } from '../components/PlateVisualizer3D';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export const AdminDashboard: React.FC = () => {
   const [sundayFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForModal, setSelectedOrderForModal] = useState<OrderItem | null>(null);
+  const [modalViewMode, setModalViewMode] = useState<'3d' | '2d'>('3d');
 
   const loadData = useCallback(async () => {
     if (!user?.isAdmin) return;
@@ -267,24 +269,104 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal preview of order */}
+      {/* Modal preview of order with 3D Export capability */}
       {selectedOrderForModal && (
-        <div className="modal-overlay">
-          <div className="modal-content glass-elevated" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>
-              Макет Заказа #{selectedOrderForModal.orderNumber}
-            </h3>
-            <PlateVisualizer2D
-              config={{
-                plateNumber: selectedOrderForModal.plateNumber,
-                regionCode: selectedOrderForModal.regionCode,
-                plateType: selectedOrderForModal.plateType as any,
-                backSideText: selectedOrderForModal.backSideText || '',
-                backSideLogo: selectedOrderForModal.backSideLogo || 'none',
-                material: selectedOrderForModal.material as any,
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content glass-elevated" style={{ padding: '24px', maxWidth: '680px', width: '92%' }}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                  Макет Заказа #{selectedOrderForModal.orderNumber}
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Клиент: <strong>{selectedOrderForModal.customerName}</strong> ({selectedOrderForModal.customerPhone})
+                </span>
+              </div>
+
+              {/* View Switcher Tabs */}
+              <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '10px' }}>
+                <button
+                  onClick={() => setModalViewMode('3d')}
+                  className={`btn ${modalViewMode === '3d' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', gap: '6px' }}
+                >
+                  <Box size={14} /> 3D Модель (Экспорт)
+                </button>
+                <button
+                  onClick={() => setModalViewMode('2d')}
+                  className={`btn ${modalViewMode === '2d' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '6px 14px', fontSize: '0.8rem', gap: '6px' }}
+                >
+                  <Eye size={14} /> 2D Схема
+                </button>
+              </div>
+            </div>
+
+            {/* Manufacturing Specifications Summary */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '8px',
+                marginBottom: '16px',
+                padding: '12px',
+                borderRadius: '10px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border-color)',
+                fontSize: '0.78rem',
               }}
-            />
-            <button className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }} onClick={() => setSelectedOrderForModal(null)}>
+            >
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Гос Номер:</span>
+                <strong>{selectedOrderForModal.regionCode} {selectedOrderForModal.plateNumber}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Материал:</span>
+                <strong style={{ textTransform: 'capitalize' }}>{selectedOrderForModal.material.replace('_', ' ')}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Оборотный Текст:</span>
+                <strong>{selectedOrderForModal.backSideText || '—'}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Логотип:</span>
+                <strong style={{ textTransform: 'uppercase' }}>{selectedOrderForModal.backSideLogo || 'Без лого'}</strong>
+              </div>
+            </div>
+
+            {/* Active Visualizer Component */}
+            {modalViewMode === '3d' ? (
+              <PlateVisualizer3D
+                config={{
+                  plateNumber: selectedOrderForModal.plateNumber,
+                  regionCode: selectedOrderForModal.regionCode,
+                  plateType: selectedOrderForModal.plateType as any,
+                  backSideText: selectedOrderForModal.backSideText || '',
+                  backSideLogo: selectedOrderForModal.backSideLogo || 'none',
+                  material: selectedOrderForModal.material as any,
+                }}
+                showExportControls={true}
+                orderNumber={selectedOrderForModal.orderNumber}
+              />
+            ) : (
+              <PlateVisualizer2D
+                config={{
+                  plateNumber: selectedOrderForModal.plateNumber,
+                  regionCode: selectedOrderForModal.regionCode,
+                  plateType: selectedOrderForModal.plateType as any,
+                  backSideText: selectedOrderForModal.backSideText || '',
+                  backSideLogo: selectedOrderForModal.backSideLogo || 'none',
+                  material: selectedOrderForModal.material as any,
+                }}
+              />
+            )}
+
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', marginTop: '20px', padding: '12px' }}
+              onClick={() => setSelectedOrderForModal(null)}
+            >
               Закрыть
             </button>
           </div>

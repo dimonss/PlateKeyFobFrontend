@@ -1,11 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { RotateCw, Sparkles } from 'lucide-react';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { RotateCw, Sparkles, Download, Camera, Box, FileCode, Layers } from 'lucide-react';
 import type { PlateConfig } from './PlateVisualizer2D';
 
-export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config }) => {
+interface PlateVisualizer3DProps {
+  config: PlateConfig;
+  showExportControls?: boolean;
+  orderNumber?: string;
+}
+
+export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
+  config,
+  showExportControls = false,
+  orderNumber,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoRotate, setAutoRotate] = useState(true);
+  const [isExporting, setIsExporting] = useState<string | null>(null);
+
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
 
   // Helper to draw realistic Kyrgyz Flag on 2D Context
   const drawKyrgyzFlagOnCanvas = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
@@ -232,13 +251,18 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
 
     // Scene, Camera, Renderer
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(0, 0, 13);
+    cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    rendererRef.current = renderer;
+
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
@@ -256,6 +280,7 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
 
     // Create 3D Keychain Group
     const group = new THREE.Group();
+    groupRef.current = group;
 
     // Generate textures from canvas
     const frontCanvas = createTextureCanvas(false);
@@ -303,7 +328,7 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
       roughness: 0.2,
     });
 
-    // Box Geometry: Width=6.8, Height=2.8 (Authentic 4.7:1 license plate proportion), Depth=0.25
+    // Box Geometry: Width=6.8, Height=2.8 (Authentic 4.7:1 license plate proportion), Depth=0.22
     const materials = [
       sideMaterial, // right
       sideMaterial, // left
@@ -409,8 +434,115 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
       renderer.dispose();
+      sceneRef.current = null;
+      groupRef.current = null;
+      rendererRef.current = null;
+      cameraRef.current = null;
     };
   }, [config, autoRotate]);
+
+  // Download Blob Utility
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const getBaseFileName = () => {
+    const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const plate = sanitize(config.plateNumber || 'Keyfob');
+    const order = orderNumber ? `Order_${sanitize(orderNumber)}` : 'Model';
+    return `PlateKeyFob_${order}_${plate}`;
+  };
+
+  // Export 3D GLB (GLTF Binary format)
+  const handleExportGLTF = () => {
+    if (!groupRef.current) return;
+    setIsExporting('glb');
+    try {
+      const exporter = new GLTFExporter();
+      exporter.parse(
+        groupRef.current,
+        (gltf) => {
+          if (gltf instanceof ArrayBuffer) {
+            const blob = new Blob([gltf], { type: 'application/octet-stream' });
+            downloadBlob(blob, `${getBaseFileName()}.glb`);
+          } else {
+            const output = JSON.stringify(gltf, null, 2);
+            const blob = new Blob([output], { type: 'application/json' });
+            downloadBlob(blob, `${getBaseFileName()}.gltf`);
+          }
+          setIsExporting(null);
+        },
+        (error) => {
+          console.error('GLTF Export Error:', error);
+          setIsExporting(null);
+        },
+        { binary: true, embedImages: true }
+      );
+    } catch (err) {
+      console.error(err);
+      setIsExporting(null);
+    }
+  };
+
+  // Export 3D OBJ format
+  const handleExportOBJ = () => {
+    if (!groupRef.current) return;
+    setIsExporting('obj');
+    try {
+      const exporter = new OBJExporter();
+      const result = exporter.parse(groupRef.current);
+      const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
+      downloadBlob(blob, `${getBaseFileName()}.obj`);
+    } catch (err) {
+      console.error('OBJ Export Error:', err);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  // Export 3D STL format (3D Printing / CNC)
+  const handleExportSTL = () => {
+    if (!groupRef.current) return;
+    setIsExporting('stl');
+    try {
+      const exporter = new STLExporter();
+      const result = exporter.parse(groupRef.current, { binary: true });
+      const buffer = result instanceof DataView ? result.buffer : result;
+      const blob = new Blob([buffer as ArrayBuffer], { type: 'application/octet-stream' });
+      downloadBlob(blob, `${getBaseFileName()}.stl`);
+    } catch (err) {
+      console.error('STL Export Error:', err);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  // Export High-Res PNG Image
+  const handleExportPNG = () => {
+    if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+    setIsExporting('png');
+    try {
+      rendererRef.current.render(sceneRef.current, cameraRef.current);
+      const dataUrl = rendererRef.current.domElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${getBaseFileName()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('PNG Export Error:', err);
+    } finally {
+      setIsExporting(null);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
@@ -426,7 +558,7 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
         }}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
         <button
           className="btn btn-secondary"
           onClick={() => setAutoRotate(!autoRotate)}
@@ -440,6 +572,67 @@ export const PlateVisualizer3D: React.FC<{ config: PlateConfig }> = ({ config })
           <Sparkles size={14} color="#f59e0b" /> Тяните мышкой для вращения 3D модели
         </span>
       </div>
+
+      {/* Admin Export Toolbar */}
+      {showExportControls && (
+        <div
+          className="glass-elevated"
+          style={{
+            width: '100%',
+            marginTop: '20px',
+            padding: '16px',
+            borderRadius: '12px',
+            background: 'rgba(15, 23, 42, 0.6)',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Download size={16} color="var(--primary)" /> Экспорт 3D Модели и Макетная Выгрузка:
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+            <button
+              className="btn btn-primary"
+              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={handleExportGLTF}
+              disabled={isExporting !== null}
+            >
+              <Box size={16} />
+              {isExporting === 'glb' ? 'Экспорт...' : 'GLTF / GLB (3D)'}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={handleExportOBJ}
+              disabled={isExporting !== null}
+            >
+              <FileCode size={16} />
+              {isExporting === 'obj' ? 'Экспорт...' : 'OBJ (CAD Mesh)'}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={handleExportSTL}
+              disabled={isExporting !== null}
+            >
+              <Layers size={16} />
+              {isExporting === 'stl' ? 'Экспорт...' : 'STL (3D Принтер)'}
+            </button>
+
+            <button
+              className="btn btn-gold"
+              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onClick={handleExportPNG}
+              disabled={isExporting !== null}
+            >
+              <Camera size={16} />
+              {isExporting === 'png' ? 'Сохранение...' : 'PNG Снимок'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
