@@ -366,20 +366,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
     ctx.restore();
     
-    // Key chain ring hole (top left - mirrored from front top right)
+    // Key chain ring hole area (Clean background, 3D physical hole is extruded in geometry)
     ctx.save();
-    ctx.fillStyle = '#0c0e12';
-    ctx.beginPath();
-    ctx.arc(39, 39, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#1e1e1e';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(39, 39, 24, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   };
 
@@ -392,8 +380,23 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     if (!isBack) {
       drawFrontSide(ctx, flagImg);
+      // Punch transparent hole in texture at top-right (x = 1015, y = 45, r = 21)
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(1015, 45, 21, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     } else {
       drawBackSide(ctx, logoImg);
+      // Punch transparent hole in texture at top-left of back side (x = 45, y = 45, r = 21)
+      // This matches the physical 3D hole location on back view
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(45, 45, 21, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     return canvas;
@@ -554,23 +557,43 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       const width3d = 8.0;
       const height3d = 1.84;
       const radius3d = 0.18; // corner radius matching 2D border-radius (approx 10px on 440px width)
-
-      const shape = new THREE.Shape();
       const x = -width3d / 2;
       const y = -height3d / 2;
 
-      shape.moveTo(x + radius3d, y);
-      shape.lineTo(x + width3d - radius3d, y);
-      shape.quadraticCurveTo(x + width3d, y, x + width3d, y + radius3d);
-      shape.lineTo(x + width3d, y + height3d - radius3d);
-      shape.quadraticCurveTo(x + width3d, y + height3d, x + width3d - radius3d, y + height3d);
-      shape.lineTo(x + radius3d, y + height3d);
-      shape.quadraticCurveTo(x, y + height3d, x, y + height3d - radius3d);
-      shape.lineTo(x, y + radius3d);
-      shape.quadraticCurveTo(x, y, x + radius3d, y);
+      // Create front shape with hole at top-right
+      const frontShape = new THREE.Shape();
+      frontShape.moveTo(x + radius3d, y);
+      frontShape.lineTo(x + width3d - radius3d, y);
+      frontShape.quadraticCurveTo(x + width3d, y, x + width3d, y + radius3d);
+      frontShape.lineTo(x + width3d, y + height3d - radius3d);
+      frontShape.quadraticCurveTo(x + width3d, y + height3d, x + width3d - radius3d, y + height3d);
+      frontShape.lineTo(x + radius3d, y + height3d);
+      frontShape.quadraticCurveTo(x, y + height3d, x, y + height3d - radius3d);
+      frontShape.lineTo(x, y + radius3d);
+      frontShape.quadraticCurveTo(x, y, x + radius3d, y);
+
+      const frontHole = new THREE.Path();
+      frontHole.absarc(x + width3d - 0.34, y + height3d - 0.36, 0.16, 0, Math.PI * 2, true);
+      frontShape.holes.push(frontHole);
+
+      // Create back shape with hole at top-left (so when rotated 180° on Y, hole perfectly aligns at top-right of scene / top-left of back view)
+      const backShape = new THREE.Shape();
+      backShape.moveTo(x + radius3d, y);
+      backShape.lineTo(x + width3d - radius3d, y);
+      backShape.quadraticCurveTo(x + width3d, y, x + width3d, y + radius3d);
+      backShape.lineTo(x + width3d, y + height3d - radius3d);
+      backShape.quadraticCurveTo(x + width3d, y + height3d, x + width3d - radius3d, y + height3d);
+      backShape.lineTo(x + radius3d, y + height3d);
+      backShape.quadraticCurveTo(x, y + height3d, x, y + height3d - radius3d);
+      backShape.lineTo(x, y + radius3d);
+      backShape.quadraticCurveTo(x, y, x + radius3d, y);
+
+      const backHole = new THREE.Path();
+      backHole.absarc(x + 0.34, y + height3d - 0.36, 0.16, 0, Math.PI * 2, true);
+      backShape.holes.push(backHole);
 
       const extrudeSettings = {
-        depth: 0.08,
+        depth: 0.04,
         bevelEnabled: true,
         bevelSegments: 3,
         steps: 1,
@@ -579,16 +602,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         bevelOffset: -0.02,
       };
 
-      const plateGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      const frontGeo = new THREE.ExtrudeGeometry(frontShape, extrudeSettings);
+      const backGeo = new THREE.ExtrudeGeometry(backShape, extrudeSettings);
 
-      // Create two meshes placed back-to-back at z=0 to support separate front/back textures
-      // Front mesh spans z ∈ [-0.02, 0.10]
-      const frontMesh = new THREE.Mesh(plateGeo, [frontMaterial, sideMaterial]);
+      const frontMesh = new THREE.Mesh(frontGeo, [frontMaterial, sideMaterial]);
       frontMesh.position.set(0, 0, 0);
       group.add(frontMesh);
 
-      // Back mesh rotated 180 degrees around Y, spans z ∈ [-0.10, 0.02]
-      const backMesh = new THREE.Mesh(plateGeo, [backMaterial, sideMaterial]);
+      const backMesh = new THREE.Mesh(backGeo, [backMaterial, sideMaterial]);
       backMesh.position.set(0, 0, 0);
       backMesh.rotation.y = Math.PI;
       group.add(backMesh);
@@ -599,9 +620,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
 
+      const updateInteraction = () => {
+        lastInteractionTimeRef.current = Date.now();
+        focusedSideRef.current = null;
+      };
+
       const onMouseDown = (e: MouseEvent) => {
         isDragging = true;
         previousMousePosition = { x: e.clientX, y: e.clientY };
+        updateInteraction();
       };
 
       const onMouseMove = (e: MouseEvent) => {
@@ -613,10 +640,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         group.rotation.x += deltaY * 0.01;
 
         previousMousePosition = { x: e.clientX, y: e.clientY };
+        updateInteraction();
       };
 
       const onMouseUp = () => {
-        isDragging = false;
+        if (isDragging) {
+          isDragging = false;
+          updateInteraction();
+        }
       };
 
       const domElement = renderer.domElement;
@@ -629,6 +660,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         if (e.touches.length === 1) {
           isDragging = true;
           previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          updateInteraction();
         }
       };
 
@@ -641,10 +673,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         group.rotation.x += deltaY * 0.01;
 
         previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        updateInteraction();
       };
 
       const onTouchEnd = () => {
-        isDragging = false;
+        if (isDragging) {
+          isDragging = false;
+          updateInteraction();
+        }
       };
 
       domElement.addEventListener('touchstart', onTouchStart);
@@ -693,6 +729,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             diffY = Math.atan2(Math.sin(diffY), Math.cos(diffY));
             group.rotation.y += diffY * 0.08;
             group.rotation.x += (targetWithSwayX - group.rotation.x) * 0.08;
+          } else if (timeSinceInteraction < 5000) {
+            // Pause auto-rotation for 5 seconds after mouse/touch drag interaction
+            group.rotation.x += (0.1 - group.rotation.x) * 0.05;
           } else {
             if (autoRotate) {
               group.rotation.y += 0.015;
@@ -720,7 +759,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         window.removeEventListener('touchmove', onTouchMove);
         window.removeEventListener('touchend', onTouchEnd);
         renderer.dispose();
-        plateGeo.dispose();
+        frontGeo.dispose();
+        backGeo.dispose();
         frontTexture.dispose();
         backTexture.dispose();
         sideMaterial.dispose();

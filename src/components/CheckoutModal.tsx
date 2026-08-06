@@ -6,6 +6,8 @@ import { createOrder, type OrderItem } from '../api/orders';
 import { getNextSunday, formatSundayText } from './SundayDeliveryNotice';
 import { useToast } from '../context/ToastContext';
 
+import { useAuth } from '../context/AuthContext';
+
 interface CheckoutModalProps {
   config: PlateConfig;
   price: number;
@@ -19,31 +21,90 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   onOrderCompleted,
 }) => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<OrderItem | null>(null);
 
-  const [customerName, setCustomerName] = useState('');
+  const initialFullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+
+  const [customerName, setCustomerName] = useState(initialFullName);
   const [customerPhone, setCustomerPhone] = useState('+996 ');
   const [customerAddress, setCustomerAddress] = useState('');
   const [city, setCity] = useState('Бишкек');
   const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'mbank' | 'optima_qr'>('cash_on_delivery');
 
+  const [errors, setErrors] = useState<{ customerName?: string; customerPhone?: string; customerAddress?: string }>({});
+
   const nextSunday = getNextSunday();
+
+  // Mask function for Kyrgyz phone numbers: +996 (XXX) XX-XX-XX
+  const formatPhoneNumber = (value: string) => {
+    // Keep digits only
+    let digits = value.replace(/\D/g, '');
+    
+    // If it starts with 996, strip it for internal handling
+    if (digits.startsWith('996')) {
+      digits = digits.slice(3);
+    }
+    
+    // Limit to 9 digits (Kyrgyz mobile standard: 555 123 456)
+    digits = digits.slice(0, 9);
+    
+    let result = '+996';
+    if (digits.length > 0) {
+      result += ' (' + digits.slice(0, 3);
+    }
+    if (digits.length >= 3) {
+      result += ') ' + digits.slice(3, 5);
+    }
+    if (digits.length >= 5) {
+      result += '-' + digits.slice(5, 7);
+    }
+    if (digits.length >= 7) {
+      result += '-' + digits.slice(7, 9);
+    }
+    return result;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setCustomerPhone(formatted);
+    if (errors.customerPhone) {
+      setErrors(prev => ({ ...prev, customerPhone: undefined }));
+    }
+  };
+
+  const validateFields = () => {
+    const newErrors: { customerName?: string; customerPhone?: string; customerAddress?: string } = {};
+
+    if (!customerName.trim()) {
+      newErrors.customerName = 'Пожалуйста, введите Ваше имя (минимум 2 символа)';
+    } else if (customerName.trim().length < 2) {
+      newErrors.customerName = 'Имя слишком короткое';
+    }
+
+    const digitsOnly = customerPhone.replace(/\D/g, '');
+    // Must be 12 digits: 996 + 9 digits
+    if (digitsOnly.length !== 12) {
+      newErrors.customerPhone = 'Введите полный номер телефона в формате +996 (XXX) XX-XX-XX';
+    }
+
+    if (!customerAddress.trim()) {
+      newErrors.customerAddress = 'Укажите точный адрес доставки (улица, дом)';
+    } else if (customerAddress.trim().length < 5) {
+      newErrors.customerAddress = 'Пожалуйста, укажите более подробный адрес';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName.trim()) {
-      showToast({ type: 'error', title: 'Ошибка', message: 'Пожалуйста, введите Ваше имя' });
-      return;
-    }
-    if (!customerPhone || customerPhone.trim().length < 9) {
-      showToast({ type: 'error', title: 'Ошибка', message: 'Введите верный номер телефона' });
-      return;
-    }
-    if (!customerAddress.trim()) {
-      showToast({ type: 'error', title: 'Ошибка', message: 'Укажите адрес доставки' });
+    if (!validateFields()) {
+      showToast({ type: 'error', title: 'Ошибка проверки', message: 'Пожалуйста, проверьте правильно ли заполнены поля' });
       return;
     }
 
@@ -187,11 +248,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <input
                 type="text"
                 className="input-field"
-                required
+                style={{ borderColor: errors.customerName ? '#ef4444' : undefined }}
                 placeholder="Асан Усенов"
                 value={customerName}
-                onChange={e => setCustomerName(e.target.value)}
+                onChange={e => {
+                  setCustomerName(e.target.value);
+                  if (errors.customerName) setErrors(prev => ({ ...prev, customerName: undefined }));
+                }}
               />
+              {errors.customerName && (
+                <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>
+                  {errors.customerName}
+                </span>
+              )}
             </div>
 
             <div className="input-group">
@@ -199,11 +268,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <input
                 type="text"
                 className="input-field"
-                required
-                placeholder="+996 555 123 456"
+                style={{ borderColor: errors.customerPhone ? '#ef4444' : undefined }}
+                placeholder="+996 (555) 12-34-56"
                 value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
+                onChange={handlePhoneChange}
               />
+              {errors.customerPhone && (
+                <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>
+                  {errors.customerPhone}
+                </span>
+              )}
             </div>
 
             <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
@@ -211,13 +285,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <label className="input-label">Город:</label>
                 <select className="input-field" value={city} onChange={e => setCity(e.target.value)}>
                   <option value="Бишкек">Бишкек</option>
-                  <option value="Ош">Ош</option>
-                  <option value="Джалал-Абад">Джалал-Абад</option>
-                  <option value="Кант">Кант</option>
-                  <option value="Токмок">Токмок</option>
-                  <option value="Каракол">Каракол</option>
-                  <option value="Нарын">Нарын</option>
-                  <option value="Талас">Талас</option>
+                  <option value="Ош" disabled>Ош (недоступно)</option>
+                  <option value="Джалал-Абад" disabled>Джалал-Абад (недоступно)</option>
+                  <option value="Кант" disabled>Кант (недоступно)</option>
+                  <option value="Токмок" disabled>Токмок (недоступно)</option>
+                  <option value="Каракол" disabled>Каракол (недоступно)</option>
+                  <option value="Нарын" disabled>Нарын (недоступно)</option>
+                  <option value="Талас" disabled>Талас (недоступно)</option>
                 </select>
               </div>
 
@@ -226,11 +300,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <input
                   type="text"
                   className="input-field"
-                  required
+                  style={{ borderColor: errors.customerAddress ? '#ef4444' : undefined }}
                   placeholder="ул. Ахунбаева 120, кв. 4"
                   value={customerAddress}
-                  onChange={e => setCustomerAddress(e.target.value)}
+                  onChange={e => {
+                    setCustomerAddress(e.target.value);
+                    if (errors.customerAddress) setErrors(prev => ({ ...prev, customerAddress: undefined }));
+                  }}
                 />
+                {errors.customerAddress && (
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', display: 'block' }}>
+                    {errors.customerAddress}
+                  </span>
+                )}
               </div>
             </div>
 

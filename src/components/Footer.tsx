@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
             Правило Доставки
           </h4>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Доставка курьером осуществляется <strong>исключительно по Воскресеньям</strong> по всем городам Кыргызстана (Бишкек, Ош, Джалал-Абад и др.).
+            Доставка курьером осуществляется <strong>исключительно по Воскресеньям</strong> по городу Бишкек.
           </p>
         </div>
 
@@ -31,8 +31,8 @@ export const Footer: React.FC = () => {
             Гарантия и Связь
           </h4>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div><MapPin size={14} style={{ display: 'inline' }} /> г. Бишкек, ул. Горького 128</div>
-            <div><Phone size={14} style={{ display: 'inline' }} /> +996 555 777 999 (WhatsApp / Telegram)</div>
+            <div><MapPin size={14} style={{ display: 'inline' }} /> г. Бишкек, ул. Горького 223</div>
+            <div><Phone size={14} style={{ display: 'inline' }} /> +996 705 55 35 11 (WhatsApp / Telegram)</div>
           </div>
         </div>
 
