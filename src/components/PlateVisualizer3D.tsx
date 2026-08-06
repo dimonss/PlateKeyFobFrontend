@@ -1486,7 +1486,7 @@ ${objectsXml}  </resources>
             marginTop: '20px',
             padding: '20px',
             borderRadius: '16px',
-            background: 'rgba(15, 23, 42, 0.75)',
+            background: 'var(--bg-glass-elevated)',
             border: '1px solid var(--border-color)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           }}
@@ -1554,7 +1554,7 @@ ${objectsXml}  </resources>
               style={{
                 marginTop: '12px',
                 padding: '10px 12px',
-                background: 'rgba(0,0,0,0.25)',
+                background: 'var(--bg-input)',
                 borderRadius: '8px',
                 fontSize: '0.78rem',
                 color: 'var(--text-muted)',

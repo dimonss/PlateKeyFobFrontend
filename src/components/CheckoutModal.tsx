@@ -130,7 +130,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {/* Order Summary Brief */}
             <div
               style={{
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--bg-input)',
                 padding: '14px',
                 borderRadius: '12px',
                 marginBottom: '20px',
@@ -253,7 +253,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       gap: '10px',
                       padding: '10px 14px',
                       borderRadius: '10px',
-                      background: paymentMethod === opt.id ? 'rgba(225, 29, 72, 0.12)' : 'rgba(0,0,0,0.2)',
+                      background: paymentMethod === opt.id ? 'rgba(225, 29, 72, 0.12)' : 'var(--bg-input)',
                       border: `1px solid ${paymentMethod === opt.id ? 'var(--primary)' : 'var(--border-color)'}`,
                       cursor: 'pointer',
                       fontSize: '0.85rem',

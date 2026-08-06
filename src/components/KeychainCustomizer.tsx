@@ -72,7 +72,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
         <div className="glass-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           
           {/* Mode Switcher */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '12px', marginBottom: '20px', width: '100%', maxWidth: '320px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', background: 'var(--bg-inset)', padding: '4px', borderRadius: '12px', marginBottom: '20px', width: '100%', maxWidth: '320px', justifyContent: 'center' }}>
             <button
               onClick={() => setViewMode('2d')}
               className={`btn ${viewMode === '2d' ? 'btn-primary' : 'btn-secondary'}`}
@@ -208,7 +208,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
                     style={{
                       padding: '10px 12px',
                       borderRadius: '12px',
-                      background: isDefault ? 'rgba(225, 29, 72, 0.12)' : 'rgba(0,0,0,0.15)',
+                      background: isDefault ? 'rgba(225, 29, 72, 0.12)' : 'var(--bg-input)',
                       border: `2px solid ${isDefault ? 'var(--primary)' : 'var(--border-color)'}`,
                       opacity: isDefault ? 1 : 0.45,
                       cursor: 'not-allowed',

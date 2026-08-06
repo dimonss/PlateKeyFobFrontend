@@ -190,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* View Mode Switcher */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', background: 'var(--bg-inset)', padding: '4px', borderRadius: '10px' }}>
             <button
               className={`btn ${viewType === 'cards' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '6px 12px', fontSize: '0.8rem' }}
@@ -262,7 +262,7 @@ export const AdminDashboard: React.FC = () => {
                 {/* Grid Content */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                   {/* Plate Preview - Identical to My Orders */}
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Макет брелка:</span>
                     <PlateVisualizer2D
                       config={{
@@ -329,7 +329,7 @@ export const AdminDashboard: React.FC = () => {
           <div style={{ minWidth: '700px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
               <thead>
-                <tr style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                <tr style={{ background: 'var(--bg-inset)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '14px 18px' }}>№ Заказа</th>
                   <th style={{ padding: '14px 18px' }}>Гос Номер</th>
                   <th style={{ padding: '14px 18px' }}>Клиент / Адрес</th>
@@ -444,7 +444,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* View Switcher Tabs */}
-              <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', background: 'var(--bg-inset)', padding: '4px', borderRadius: '10px' }}>
                 <button
                   onClick={() => setModalViewMode('3d')}
                   className={`btn ${modalViewMode === '3d' ? 'btn-primary' : 'btn-secondary'}`}

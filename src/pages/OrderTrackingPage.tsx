@@ -108,7 +108,7 @@ export const OrderTrackingPage: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
             {/* Visualizer Preview */}
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ background: 'var(--bg-input)', padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Макет заказанного брелка:</span>
               <PlateVisualizer2D
                 config={{
