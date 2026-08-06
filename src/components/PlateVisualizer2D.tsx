@@ -307,9 +307,9 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                 width: '18px',
                 height: '18px',
                 borderRadius: '50%',
-                background: 'rgba(12, 14, 18, 0.75)',
-                border: '2px solid rgba(30, 30, 30, 0.8)',
-                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.2)',
+                background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%)',
+                border: '1.5px solid rgba(148, 163, 184, 0.8)',
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.15)',
                 zIndex: 5,
               }}
             />
@@ -343,9 +343,9 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
                 width: '18px',
                 height: '18px',
                 borderRadius: '50%',
-                background: 'rgba(12, 14, 18, 0.75)',
-                border: '2px solid rgba(30, 30, 30, 0.8)',
-                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.2)',
+                background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%)',
+                border: '1.5px solid rgba(148, 163, 184, 0.8)',
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3), 0 0 4px rgba(0,0,0,0.15)',
                 zIndex: 5,
               }}
             />
