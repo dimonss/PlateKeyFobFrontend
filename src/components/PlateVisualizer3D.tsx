@@ -877,11 +877,11 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       // Positions grouped by color index: 1 = Black Text/Border, 2 = Flag Red, 3 = Flag Yellow
       const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
 
-      // Step size = 1 cell (full 1060x244 resolution = 0.09mm razor-sharp precision)
-      const step = 1;
+      // Build 2D color grid for 3D extrusion with side walls
+      const grid: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
 
-      for (let gy = 0; gy < sampleH; gy += step) {
-        for (let gx = 0; gx < sampleW; gx += step) {
+      for (let gy = 0; gy < sampleH; gy++) {
+        for (let gx = 0; gx < sampleW; gx++) {
           const idx = (gy * sampleW + gx) * 4;
           const r = pixels[idx];
           const g = pixels[idx + 1];
@@ -891,39 +891,74 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           if (a < 128) continue;
 
           let colorIdx = 0;
-          // Red Flag
           if (r > 140 && g < 100 && b < 120) {
-            colorIdx = 2;
+            colorIdx = 2; // Flag Red
+          } else if (r > 170 && g > 130 && b < 100) {
+            colorIdx = 3; // Flag Yellow
+          } else if (r < 120 && g < 120 && b < 120) {
+            colorIdx = 1; // Black Text/Digits/Border
           }
-          // Yellow Flag Sun / Emblem
-          else if (r > 170 && g > 130 && b < 100) {
-            colorIdx = 3;
+          grid[gy][gx] = colorIdx;
+        }
+      }
+
+      for (let gy = 0; gy < sampleH; gy++) {
+        for (let gx = 0; gx < sampleW; gx++) {
+          const colorIdx = grid[gy][gx];
+          if (colorIdx === 0) continue;
+
+          const cx1 = -width / 2 + gx * cellW;
+          const cx2 = cx1 + cellW;
+          const cy1 = height / 2 - (gy + 1) * cellH;
+          const cy2 = cy1 + cellH;
+
+          // Only skip pixels inside the 2.0mm physical keyring hole cutout
+          const distHole = Math.hypot((cx1 + cx2) / 2 - 44.5, (cy1 + cy2) / 2 - 7.6);
+          if (distHole <= 1.95) continue;
+
+          // Protrusion height: 0.6 mm for crisp, clean 3D printing
+          const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.4 : 0.6;
+          const cz1 = baseThickness; // 3.0 mm (Base plate level)
+          const cz2 = baseThickness + reliefH; // 3.6 mm (Top face level)
+          const bevel = 0.25; // 0.25 mm chamfer / bevel offset (фаска)
+
+          const targetArr = positionsByColor[colorIdx];
+
+          // 1. Top Face
+          targetArr.push(
+            cx1, cy1, cz2,  cx2, cy1, cz2,  cx2, cy2, cz2,
+            cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
+          );
+
+          // 2. North Chamfer Wall (gy - 1, sloped outward by bevel at cz1)
+          if (gy === 0 || grid[gy - 1][gx] !== colorIdx) {
+            targetArr.push(
+              cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
+              cx1 - bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,                   cx1, cy2, cz2
+            );
           }
-          // Black Text / Digits / Border / KG / Separator
-          else if (r < 120 && g < 120 && b < 120) {
-            colorIdx = 1;
+
+          // 3. South Chamfer Wall (gy + 1, sloped outward by bevel at cz1)
+          if (gy === sampleH - 1 || grid[gy + 1][gx] !== colorIdx) {
+            targetArr.push(
+              cx1 - bevel, cy1 - bevel, cz1,   cx2, cy1, cz2,                   cx2 + bevel, cy1 - bevel, cz1,
+              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy1, cz2,                   cx2, cy1, cz2
+            );
           }
 
-          if (colorIdx > 0) {
-            const stepW = cellW * step;
-            const stepH = cellH * step;
-            const cx1 = -width / 2 + gx * cellW;
-            const cx2 = cx1 + stepW;
-            const cy1 = height / 2 - (gy + step) * cellH;
-            const cy2 = cy1 + stepH;
+          // 4. West Chamfer Wall (gx - 1, sloped outward by bevel at cz1)
+          if (gx === 0 || grid[gy][gx - 1] !== colorIdx) {
+            targetArr.push(
+              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy2, cz2,                   cx1 - bevel, cy2 + bevel, cz1,
+              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy1, cz2,                   cx1, cy2, cz2
+            );
+          }
 
-            // Flag relief is slightly lower (+0.8mm) than black text (+1.2mm) for perfect layering
-            const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.8 : 1.2;
-            const cz2 = baseThickness + reliefH;
-
-            // Only skip pixels inside the 2.0mm physical keyring hole cutout
-            const distHole = Math.hypot((cx1 + cx2) / 2 - 44.5, (cy1 + cy2) / 2 - 7.6);
-            if (distHole <= 1.95) continue;
-
-            // Top quad
-            positionsByColor[colorIdx].push(
-              cx1, cy1, cz2,  cx2, cy1, cz2,  cx2, cy2, cz2,
-              cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
+          // 5. East Chamfer Wall (gx + 1, sloped outward by bevel at cz1)
+          if (gx === sampleW - 1 || grid[gy][gx + 1] !== colorIdx) {
+            targetArr.push(
+              cx2 + bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
+              cx2 + bevel, cy1 - bevel, cz1,   cx2, cy2, cz2,                   cx2, cy1, cz2
             );
           }
         }
