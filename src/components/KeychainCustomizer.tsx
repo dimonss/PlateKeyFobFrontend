@@ -93,7 +93,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
           {viewMode === '2d' ? (
             <PlateVisualizer2D config={config} />
           ) : (
-            <PlateVisualizer3D config={config} />
+            <PlateVisualizer3D config={config} showExportControls={true} />
           )}
 
           {/* Quick Presets */}

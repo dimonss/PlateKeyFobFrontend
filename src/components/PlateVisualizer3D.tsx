@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
-import { RotateCw, Sparkles, Download, Camera, Box, FileCode, Layers } from 'lucide-react';
+import { zipSync, strToU8 } from 'fflate';
+import { RotateCw, Sparkles, Download, Camera, Box, FileCode, Layers, Printer, Info } from 'lucide-react';
 import { parsePlateText, type PlateConfig } from './PlateVisualizer2D';
 
 interface PlateVisualizer3DProps {
@@ -275,20 +276,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
     ctx.restore();
     
-    // Key chain ring hole (top right)
+    // Key chain ring hole area (Clean background, 3D physical hole is extruded in geometry)
     ctx.save();
-    ctx.fillStyle = '#0c0e12';
-    ctx.beginPath();
-    ctx.arc(1021, 39, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#1e1e1e';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(1021, 39, 24, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   };
 
@@ -823,16 +812,268 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
   };
 
+  // Helper to construct a flat, 100mm 3D printable solid mesh with real 3D raised text, borders & multi-color flag
+  const buildPrintable3DGroup = (): THREE.Group => {
+    const printableGroup = new THREE.Group();
+
+    const width = 100.0;
+    const height = 23.0;
+    const radius = 2.5;
+    const baseThickness = 3.0;
+
+    const shape = new THREE.Shape();
+    const x = -width / 2;
+    const y = -height / 2;
+
+    shape.moveTo(x + radius, y);
+    shape.lineTo(x + width - radius, y);
+    shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+    shape.lineTo(x + width, y + height - radius);
+    shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    shape.lineTo(x + radius, y + height);
+    shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+    shape.lineTo(x, y + radius);
+    shape.quadraticCurveTo(x, y, x + radius, y);
+
+    // Keyring hole at top-right (positioned tangent along top-right inner black line)
+    const holePath = new THREE.Path();
+    holePath.absarc(44.5, 7.6, 2.0, 0, Math.PI * 2, true);
+    shape.holes.push(holePath);
+
+    const extrudeSettings = {
+      depth: baseThickness,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: 0.3,
+      bevelThickness: 0.3,
+    };
+
+    let baseColorHex = 0xffffff;
+    if (config.material === 'black_matte') baseColorHex = 0x1f2937;
+    else if (config.material === 'gold_edge') baseColorHex = 0xffd700;
+    else if (config.material === 'carbon') baseColorHex = 0x27272a;
+    else if (config.material === 'chrome') baseColorHex = 0xcbd5e1;
+
+    const baseGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    const baseMat = new THREE.MeshStandardMaterial({ color: baseColorHex, roughness: 0.3 });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.name = 'BasePlate_Color_0';
+    printableGroup.add(baseMesh);
+
+    // 2. High-Definition 3D Relief Mesh (Full 1060 x 244 Resolution = 0.09mm ultra-fine detail)
+    const frontCanvas = createTextureCanvas(false);
+    const sampleW = 1060;
+    const sampleH = 244;
+
+    const ctx = frontCanvas.getContext('2d');
+    if (ctx) {
+      const imgData = ctx.getImageData(0, 0, sampleW, sampleH);
+      const pixels = imgData.data;
+
+      const cellW = width / sampleW;
+      const cellH = height / sampleH;
+
+      // Positions grouped by color index: 1 = Black Text/Border, 2 = Flag Red, 3 = Flag Yellow
+      const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
+
+      // Step size = 1 cell (full 1060x244 resolution = 0.09mm razor-sharp precision)
+      const step = 1;
+
+      for (let gy = 0; gy < sampleH; gy += step) {
+        for (let gx = 0; gx < sampleW; gx += step) {
+          const idx = (gy * sampleW + gx) * 4;
+          const r = pixels[idx];
+          const g = pixels[idx + 1];
+          const b = pixels[idx + 2];
+          const a = pixels[idx + 3];
+
+          if (a < 128) continue;
+
+          let colorIdx = 0;
+          // Red Flag
+          if (r > 140 && g < 100 && b < 120) {
+            colorIdx = 2;
+          }
+          // Yellow Flag Sun / Emblem
+          else if (r > 170 && g > 130 && b < 100) {
+            colorIdx = 3;
+          }
+          // Black Text / Digits / Border / KG / Separator
+          else if (r < 120 && g < 120 && b < 120) {
+            colorIdx = 1;
+          }
+
+          if (colorIdx > 0) {
+            const stepW = cellW * step;
+            const stepH = cellH * step;
+            const cx1 = -width / 2 + gx * cellW;
+            const cx2 = cx1 + stepW;
+            const cy1 = height / 2 - (gy + step) * cellH;
+            const cy2 = cy1 + stepH;
+
+            // Flag relief is slightly lower (+0.8mm) than black text (+1.2mm) for perfect layering
+            const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.8 : 1.2;
+            const cz2 = baseThickness + reliefH;
+
+            // Only skip pixels inside the 2.0mm physical keyring hole cutout
+            const distHole = Math.hypot((cx1 + cx2) / 2 - 44.5, (cy1 + cy2) / 2 - 7.6);
+            if (distHole <= 1.95) continue;
+
+            // Top quad
+            positionsByColor[colorIdx].push(
+              cx1, cy1, cz2,  cx2, cy1, cz2,  cx2, cy2, cz2,
+              cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
+            );
+          }
+        }
+      }
+
+      const colorMaterials: Record<number, number> = {
+        1: 0x1e1e1e, // Black Text / Border
+        2: 0xe11d48, // Flag Red
+        3: 0xf59e0b, // Flag Yellow / Gold
+      };
+
+      for (const [cIdxStr, posArray] of Object.entries(positionsByColor)) {
+        const cIdx = Number(cIdxStr);
+        if (posArray.length > 0) {
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+          geo.computeVertexNormals();
+
+          const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.name = `Relief_Color_${cIdx}`;
+          printableGroup.add(mesh);
+        }
+      }
+    }
+
+    return printableGroup;
+  };
+
+  // Export 3D 3MF format (Native BambuStudio / PrusaSlicer format for Bambu Lab P2S)
+  const handleExport3MF = () => {
+    setIsExporting('3mf');
+    try {
+      const printableGroup = buildPrintable3DGroup();
+
+      let baseColorHex = '#FFFFFF';
+      if (config.material === 'black_matte') baseColorHex = '#1F2937';
+      else if (config.material === 'gold_edge') baseColorHex = '#FFD700';
+      else if (config.material === 'carbon') baseColorHex = '#27272A';
+      else if (config.material === 'chrome') baseColorHex = '#CBD5E1';
+
+      let verticesXml = '';
+      let trianglesXml = '';
+      let vertexOffset = 0;
+
+      printableGroup.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const geometry = mesh.geometry.clone();
+          geometry.applyMatrix4(mesh.matrixWorld);
+
+          const posAttr = geometry.attributes.position;
+          const indexAttr = geometry.index;
+          
+          let colorIndex = 0;
+          if (mesh.name.startsWith('Relief_Color_')) {
+            colorIndex = parseInt(mesh.name.replace('Relief_Color_', ''), 10);
+          }
+
+          if (posAttr) {
+            for (let i = 0; i < posAttr.count; i++) {
+              const x = posAttr.getX(i);
+              const y = posAttr.getY(i);
+              const z = posAttr.getZ(i);
+              verticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
+            }
+
+            const writeTriangle = (a: number, b: number, c: number) => {
+              trianglesXml += `        <triangle v1="${a + vertexOffset}" v2="${b + vertexOffset}" v3="${c + vertexOffset}" pid="1" p1="${colorIndex}" />\n`;
+            };
+
+            if (indexAttr) {
+              for (let i = 0; i < indexAttr.count; i += 3) {
+                writeTriangle(indexAttr.getX(i), indexAttr.getX(i + 1), indexAttr.getX(i + 2));
+              }
+            } else {
+              for (let i = 0; i < posAttr.count; i += 3) {
+                writeTriangle(i, i + 1, i + 2);
+              }
+            }
+
+            vertexOffset += posAttr.count;
+          }
+        }
+      });
+
+      const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US"
+  xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+  xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"
+  xmlns:BambuStudio="http://schemas.bambulab.com/package/2021/bambustudio">
+  <metadata name="Application">BambuStudio</metadata>
+  <metadata name="BambuStudio:Version">01.09.00.00</metadata>
+  <metadata name="PrinterModel">Bambu Lab P2S</metadata>
+  <metadata name="Title">${getBaseFileName()}</metadata>
+  <resources>
+    <m:colorgroup id="1">
+      <m:color color="${baseColorHex.toUpperCase()}FF" />
+      <m:color color="#1E1E1EFF" />
+      <m:color color="#E11D48FF" />
+      <m:color color="#F59E0BFF" />
+    </m:colorgroup>
+    <object id="1" type="model">
+      <mesh>
+        <vertices>
+${verticesXml}        </vertices>
+        <triangles>
+${trianglesXml}        </triangles>
+      </mesh>
+    </object>
+  </resources>
+  <build>
+    <item objectid="1" />
+  </build>
+</model>`;
+
+      const zipped = zipSync({
+        '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+ <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+ <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+</Types>`),
+        '_rels/.rels': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+ <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+</Relationships>`),
+        '3D/3dmodel.model': strToU8(modelXml)
+      });
+
+      const blob = new Blob([zipped.buffer], { type: 'application/vnd.ms-package.3dmanufacturing-3dmodel' });
+      downloadBlob(blob, `${getBaseFileName()}_BambuStudio.3mf`);
+    } catch (err) {
+      console.error('3MF Export Error:', err);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   // Export 3D STL format (3D Printing / CNC)
   const handleExportSTL = () => {
-    if (!groupRef.current) return;
     setIsExporting('stl');
     try {
+      const printableGroup = buildPrintable3DGroup();
+      printableGroup.updateMatrixWorld(true);
+
       const exporter = new STLExporter();
-      const result = exporter.parse(groupRef.current, { binary: true });
+      const result = exporter.parse(printableGroup, { binary: true });
       const buffer = result instanceof DataView ? result.buffer : result;
       const blob = new Blob([buffer as ArrayBuffer], { type: 'application/octet-stream' });
-      downloadBlob(blob, `${getBaseFileName()}.stl`);
+      downloadBlob(blob, `${getBaseFileName()}_BambuStudio.stl`);
     } catch (err) {
       console.error('STL Export Error:', err);
     } finally {
@@ -889,61 +1130,136 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         </span>
       </div>
 
-      {/* Admin Export Toolbar */}
+      {/* Export Toolbar */}
       {showExportControls && (
         <div
           className="glass-elevated"
           style={{
             width: '100%',
             marginTop: '20px',
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '20px',
+            borderRadius: '16px',
+            background: 'rgba(15, 23, 42, 0.75)',
             border: '1px solid var(--border-color)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           }}
         >
-          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Download size={16} color="var(--primary)" /> Экспорт 3D Модели и Макетная Выгрузка:
+          {/* BambuStudio Dedicated Section */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05))',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px',
+            }}
+          >
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#10b981', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Printer size={20} color="#10b981" /> Готовность к 3D Печати: Bambu Lab P2S (BambuStudio)
+            </div>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.4 }}>
+              Скачайте файл 3D модели в формате <strong>.3mf</strong> или <strong>.stl</strong> и откройте его прямо в BambuStudio для отправки на ваш принтер Bambu Lab P2S.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+              <button
+                className="btn btn-primary"
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                }}
+                onClick={handleExport3MF}
+                disabled={isExporting !== null}
+              >
+                <Printer size={18} />
+                {isExporting === '3mf' ? 'Генерация 3MF...' : 'Скачать 3MF (BambuStudio)'}
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+                onClick={handleExportSTL}
+                disabled={isExporting !== null}
+              >
+                <Layers size={18} />
+                {isExporting === 'stl' ? 'Экспорт STL...' : 'Скачать STL (Mesh)'}
+              </button>
+            </div>
+
+            {/* Recommended Bambu P2S Settings */}
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '10px 12px',
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                color: 'var(--text-muted)',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Info size={14} color="#10b981" /> Рекомендуемые настройки в BambuStudio для P2S:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                <li><strong>Размер модели:</strong> 100.0 × 23.0 × 4.0 мм (1:1 точный пропорциональный размер брелка в мм)</li>
+                <li><strong>Принтер:</strong> Bambu Lab P2S | <strong>Сопло:</strong> 0.4 мм (или 0.2 мм для сверхчеткого текста)</li>
+                <li><strong>Высота слоя (Layer height):</strong> 0.12 мм — 0.16 мм High Detail</li>
+                <li><strong>Заполнение (Infill):</strong> 20% Gyroid | <strong>Стенки (Wall loops):</strong> 3-4</li>
+                <li><strong>AMS / Двухцветная печать:</strong> Назначьте цвет шрифта/рамок или добавьте паузу на высоте Z = 1.0 мм</li>
+              </ul>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+          {/* Other Export Formats */}
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={15} /> Другие форматы и снимки:
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
             <button
-              className="btn btn-primary"
-              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              className="btn btn-secondary"
+              style={{ padding: '8px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={handleExportGLTF}
               disabled={isExporting !== null}
             >
-              <Box size={16} />
-              {isExporting === 'glb' ? 'Экспорт...' : 'GLTF / GLB (3D)'}
+              <Box size={15} />
+              {isExporting === 'glb' ? 'Экспорт...' : 'GLTF / GLB'}
             </button>
 
             <button
               className="btn btn-secondary"
-              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ padding: '8px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={handleExportOBJ}
               disabled={isExporting !== null}
             >
-              <FileCode size={16} />
-              {isExporting === 'obj' ? 'Экспорт...' : 'OBJ (CAD Mesh)'}
-            </button>
-
-            <button
-              className="btn btn-secondary"
-              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              onClick={handleExportSTL}
-              disabled={isExporting !== null}
-            >
-              <Layers size={16} />
-              {isExporting === 'stl' ? 'Экспорт...' : 'STL (3D Принтер)'}
+              <FileCode size={15} />
+              {isExporting === 'obj' ? 'Экспорт...' : 'OBJ Mesh'}
             </button>
 
             <button
               className="btn btn-gold"
-              style={{ padding: '10px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ padding: '8px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={handleExportPNG}
               disabled={isExporting !== null}
             >
-              <Camera size={16} />
+              <Camera size={15} />
               {isExporting === 'png' ? 'Сохранение...' : 'PNG Снимок'}
             </button>
           </div>
