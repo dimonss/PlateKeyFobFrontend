@@ -578,20 +578,24 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       shape.quadraticCurveTo(x, y, x + radius3d, y);
 
       const extrudeSettings = {
-        depth: 0.1,
-        bevelEnabled: false,
+        depth: 0.08,
+        bevelEnabled: true,
+        bevelSegments: 3,
         steps: 1,
+        bevelSize: 0.02,
+        bevelThickness: 0.02,
+        bevelOffset: -0.02,
       };
 
       const plateGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
 
       // Create two meshes placed back-to-back at z=0 to support separate front/back textures
-      // Front mesh spans z ∈ [0, 0.1]
+      // Front mesh spans z ∈ [-0.02, 0.10]
       const frontMesh = new THREE.Mesh(plateGeo, [frontMaterial, sideMaterial]);
       frontMesh.position.set(0, 0, 0);
       group.add(frontMesh);
 
-      // Back mesh rotated 180 degrees around Y, spans z ∈ [-0.1, 0]
+      // Back mesh rotated 180 degrees around Y, spans z ∈ [-0.10, 0.02]
       const backMesh = new THREE.Mesh(plateGeo, [backMaterial, sideMaterial]);
       backMesh.position.set(0, 0, 0);
       backMesh.rotation.y = Math.PI;
