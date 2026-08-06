@@ -6,6 +6,7 @@ import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
 import { zipSync, strToU8 } from 'fflate';
 import { RotateCw, Sparkles, Download, Camera, Box, FileCode, Layers, Printer, Info } from 'lucide-react';
 import { parsePlateText, type PlateConfig } from './PlateVisualizer2D';
+import { useAuth } from '../context/AuthContext';
 
 interface PlateVisualizer3DProps {
   config: PlateConfig;
@@ -18,6 +19,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   showExportControls = false,
   orderNumber,
 }) => {
+  const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoRotate, setAutoRotate] = useState(true);
   const [isExporting, setIsExporting] = useState<string | null>(null);
@@ -1477,8 +1479,8 @@ ${objectsXml}  </resources>
         </span>
       </div>
 
-      {/* Export Toolbar */}
-      {showExportControls && (
+      {/* Export Toolbar (Admin Only) */}
+      {showExportControls && user?.isAdmin && (
         <div
           className="glass-elevated"
           style={{

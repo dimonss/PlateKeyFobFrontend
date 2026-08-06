@@ -12,11 +12,13 @@ import { MyOrdersPage } from './pages/MyOrdersPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
+import { useToast } from './context/ToastContext';
 import type { PlateConfig } from './components/PlateVisualizer2D';
 import type { OrderItem } from './api/orders';
 
 export const AppContent: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'customizer' | 'track' | 'orders' | 'admin'>('customizer');
 
   // Checkout modal state
@@ -37,6 +39,15 @@ export const AppContent: React.FC = () => {
   }, [user, activeTab]);
 
   const handleOrderClick = (config: PlateConfig, price: number) => {
+    if (!user) {
+      showToast({
+        type: 'warning',
+        title: 'Требуется авторизация',
+        message: 'Для оформления заказа необходимо войти в аккаунт или зарегистрироваться',
+      });
+      setIsAuthOpen(true);
+      return;
+    }
     setCheckoutConfig(config);
     setCheckoutPrice(price);
     setIsCheckoutOpen(true);
