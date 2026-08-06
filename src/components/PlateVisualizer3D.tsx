@@ -32,6 +32,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   const focusedSideRef = useRef<'front' | 'back' | null>(null);
   const currentRotationYRef = useRef<number>(0);
   const currentRotationXRef = useRef<number>(0.1);
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
 
   const drawRoundedRect = (
     ctx: CanvasRenderingContext2D,
@@ -728,8 +729,13 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     if (hasLogo) {
       logoImg.src = `${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`;
-      logoImg.onload = checkLoaded;
+      logoImg.onload = () => {
+        logoImgRef.current = logoImg;
+        checkLoaded();
+      };
       logoImg.onerror = checkLoaded;
+    } else {
+      logoImgRef.current = null;
     }
     
     flagImg.src = `${import.meta.env.BASE_URL}flag.svg`;
@@ -861,16 +867,22 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     baseMesh.name = 'BasePlate_Color_0';
     printableGroup.add(baseMesh);
 
-    // 2. High-Definition 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
+    const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
+    const sampleW = 1060;
+    const sampleH = 244;
+    const cellW = width / sampleW;
+    const cellH = height / sampleH;
+
+    // 2. High-Definition FRONT 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
     const cleanCanvas = document.createElement('canvas');
-    cleanCanvas.width = 1060;
-    cleanCanvas.height = 244;
+    cleanCanvas.width = sampleW;
+    cleanCanvas.height = sampleH;
     const cleanCtx = cleanCanvas.getContext('2d');
 
     if (cleanCtx) {
       // Fill canvas background with pure white so no material textures or outer squares get extruded
       cleanCtx.fillStyle = '#FFFFFF';
-      cleanCtx.fillRect(0, 0, 1060, 244);
+      cleanCtx.fillRect(0, 0, sampleW, sampleH);
 
       // Draw inner plate base white
       cleanCtx.save();
@@ -969,16 +981,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       }
       cleanCtx.restore();
 
-      const sampleW = 1060;
-      const sampleH = 244;
       const imgData = cleanCtx.getImageData(0, 0, sampleW, sampleH);
       const pixels = imgData.data;
-
-      const cellW = width / sampleW;
-      const cellH = height / sampleH;
-
-      // Positions grouped by color index: 1 = Black Text/Border, 2 = Flag Red, 3 = Flag Yellow
-      const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
 
       // Build 2D color grid for 3D extrusion with side walls
       const grid: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
@@ -1020,20 +1024,27 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           if (distHole <= 1.0) continue;
 
           // Protrusion height: 0.6 mm for crisp 3D printing
+          // Penetrate 0.5mm INTO base plate (from 2.5mm to 3.6mm) so slicer fuses them into 1 solid contiguous volume with 0 floating regions
           const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.4 : 0.6;
-          const cz1 = baseThickness; // 3.0 mm (Base plate level)
+          const cz1 = baseThickness - 0.5; // 2.5 mm (Fuses 0.5mm deep inside base plate)
           const cz2 = baseThickness + reliefH; // 3.6 mm (Top face level)
           const bevel = 0.12; // 0.12 mm chamfer / bevel offset (фаска)
 
           const targetArr = positionsByColor[colorIdx];
 
-          // 1. Top Face
+          // 1. Top Face (z = cz2)
           targetArr.push(
             cx1, cy1, cz2,  cx2, cy1, cz2,  cx2, cy2, cz2,
             cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
           );
 
-          // 2. North Chamfer Wall (gy - 1)
+          // 2. Bottom Face (z = cz1, 0.5mm inside base plate for 100% manifold solid fusion)
+          targetArr.push(
+            cx1 - bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2 + bevel, cy1 - bevel, cz1,
+            cx1 - bevel, cy1 - bevel, cz1,   cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1
+          );
+
+          // 3. North Chamfer Wall (gy - 1)
           if (gy === 0 || grid[gy - 1][gx] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
@@ -1041,7 +1052,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 3. South Chamfer Wall (gy + 1)
+          // 4. South Chamfer Wall (gy + 1)
           if (gy === sampleH - 1 || grid[gy + 1][gx] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy1 - bevel, cz1,   cx2, cy1, cz2,                   cx2 + bevel, cy1 - bevel, cz1,
@@ -1049,7 +1060,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 4. West Chamfer Wall (gx - 1)
+          // 5. West Chamfer Wall (gx - 1)
           if (gx === 0 || grid[gy][gx - 1] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy1 - bevel, cz1,   cx1, cy2, cz2,                   cx1 - bevel, cy2 + bevel, cz1,
@@ -1057,7 +1068,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 5. East Chamfer Wall (gx + 1)
+          // 6. East Chamfer Wall (gx + 1)
           if (gx === sampleW - 1 || grid[gy][gx + 1] !== colorIdx) {
             targetArr.push(
               cx2 + bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
@@ -1066,25 +1077,203 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           }
         }
       }
+    }
 
-      const colorMaterials: Record<number, number> = {
-        1: 0x1e1e1e, // Black Text / Border
-        2: 0xe11d48, // Flag Red
-        3: 0xf59e0b, // Flag Yellow / Gold
-      };
+    // 3. High-Definition BACK 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
+    const cleanBackCanvas = document.createElement('canvas');
+    cleanBackCanvas.width = sampleW;
+    cleanBackCanvas.height = sampleH;
+    const cleanBackCtx = cleanBackCanvas.getContext('2d');
 
-      for (const [cIdxStr, posArray] of Object.entries(positionsByColor)) {
-        const cIdx = Number(cIdxStr);
-        if (posArray.length > 0) {
-          const geo = new THREE.BufferGeometry();
-          geo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
-          geo.computeVertexNormals();
+    if (cleanBackCtx) {
+      cleanBackCtx.fillStyle = '#FFFFFF';
+      cleanBackCtx.fillRect(0, 0, sampleW, sampleH);
 
-          const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
-          const mesh = new THREE.Mesh(geo, mat);
-          mesh.name = `Relief_Color_${cIdx}`;
-          printableGroup.add(mesh);
+      // Black frame line
+      cleanBackCtx.save();
+      cleanBackCtx.strokeStyle = '#1E1E1E';
+      cleanBackCtx.lineWidth = 9;
+      cleanBackCtx.beginPath();
+      drawRoundedRect(cleanBackCtx, 14.5, 14.5, 1031, 215, 12);
+      cleanBackCtx.stroke();
+      cleanBackCtx.restore();
+
+      const hasText = !!(config.backSideText && config.backSideText.trim());
+      const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
+      const logoImg = logoImgRef.current;
+
+      let maxW = 240;
+      let maxH = 190;
+      if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
+        maxW = 300;
+        maxH = 180;
+      }
+
+      let logoW = maxW;
+      let logoH = maxH;
+      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
+        const imgRatio = logoImg.naturalWidth / logoImg.naturalHeight;
+        if (maxW / maxH > imgRatio) {
+          logoW = maxH * imgRatio;
+        } else {
+          logoH = maxW / imgRatio;
         }
+      }
+
+      if (hasLogo && hasText) {
+        cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
+        const textW = cleanBackCtx.measureText(config.backSideText).width;
+        const gap = 48;
+        const totalW = logoW + gap + textW;
+        const startX = 530 - totalW / 2;
+
+        if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+          cleanBackCtx.save();
+          if (config.backSideLogo !== 'bmw') {
+            cleanBackCtx.filter = 'brightness(0)';
+          }
+          cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
+          cleanBackCtx.restore();
+        }
+
+        cleanBackCtx.fillStyle = '#1E1E1E';
+        cleanBackCtx.textAlign = 'left';
+        cleanBackCtx.textBaseline = 'middle';
+        cleanBackCtx.fillText(config.backSideText, startX + logoW + gap, 126);
+
+      } else if (hasLogo) {
+        const startX = 530 - logoW / 2;
+        if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+          cleanBackCtx.save();
+          if (config.backSideLogo !== 'bmw') {
+            cleanBackCtx.filter = 'brightness(0)';
+          }
+          cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
+          cleanBackCtx.restore();
+        }
+
+      } else if (hasText) {
+        cleanBackCtx.fillStyle = '#1E1E1E';
+        cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
+        cleanBackCtx.textAlign = 'center';
+        cleanBackCtx.textBaseline = 'middle';
+        cleanBackCtx.fillText(config.backSideText, 530, 126);
+      }
+
+      const imgDataBack = cleanBackCtx.getImageData(0, 0, sampleW, sampleH);
+      const pixelsBack = imgDataBack.data;
+
+      const gridBack: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
+
+      for (let gy = 0; gy < sampleH; gy++) {
+        for (let gx = 0; gx < sampleW; gx++) {
+          const idx = (gy * sampleW + gx) * 4;
+          const r = pixelsBack[idx];
+          const g = pixelsBack[idx + 1];
+          const b = pixelsBack[idx + 2];
+          const a = pixelsBack[idx + 3];
+
+          if (a < 128) continue;
+
+          let colorIdx = 0;
+          if (r > 140 && g < 100 && b < 120) {
+            colorIdx = 2; // Red (if logo has red)
+          } else if (r > 170 && g > 130 && b < 100) {
+            colorIdx = 3; // Yellow (if logo has yellow/gold)
+          } else if (r < 180 && g < 180 && b < 180) {
+            colorIdx = 1; // Black Text/Logo/Border
+          }
+          gridBack[gy][gx] = colorIdx;
+        }
+      }
+
+      for (let gy = 0; gy < sampleH; gy++) {
+        for (let gx = 0; gx < sampleW; gx++) {
+          const colorIdx = gridBack[gy][gx];
+          if (colorIdx === 0) continue;
+
+          const cx_canvas1 = -width / 2 + gx * cellW;
+          const cx_canvas2 = cx_canvas1 + cellW;
+          const cy1 = height / 2 - (gy + 1) * cellH;
+          const cy2 = cy1 + cellH;
+
+          // Mirrored X for back side view looking from -Z
+          const cx1 = -cx_canvas2;
+          const cx2 = -cx_canvas1;
+
+          // Skip physical keyring hole
+          const distHole = Math.hypot((cx1 + cx2) / 2 - 23.8, (cy1 + cy2) / 2 - 3.2);
+          if (distHole <= 1.0) continue;
+
+          const cz1 = 0.0; // Exactly flush with back surface (z = 0.0mm)
+          const cz2 = 0.6; // Inlaid 0.6mm deep inside base plate (z = 0.6mm)
+
+          const targetArr = positionsByColor[colorIdx];
+
+          // 1. Flush Outer Back Face (z = 0.0mm, facing -Z)
+          targetArr.push(
+            cx2, cy1, cz1,   cx1, cy1, cz1,   cx1, cy2, cz1,
+            cx2, cy1, cz1,   cx1, cy2, cz1,   cx2, cy2, cz1
+          );
+
+          // 2. Inlaid Top Face inside base (z = 0.6mm, facing +Z)
+          targetArr.push(
+            cx1, cy1, cz2,   cx2, cy1, cz2,   cx2, cy2, cz2,
+            cx1, cy1, cz2,   cx2, cy2, cz2,   cx1, cy2, cz2
+          );
+
+          // 3. North Wall (gy - 1, top edge cy2, facing +Y)
+          if (gy === 0 || gridBack[gy - 1][gx] !== colorIdx) {
+            targetArr.push(
+              cx1, cy2, cz1,   cx2, cy2, cz2,   cx2, cy2, cz1,
+              cx1, cy2, cz1,   cx1, cy2, cz2,   cx2, cy2, cz2
+            );
+          }
+
+          // 4. South Wall (gy + 1, bottom edge cy1, facing -Y)
+          if (gy === sampleH - 1 || gridBack[gy + 1][gx] !== colorIdx) {
+            targetArr.push(
+              cx1, cy1, cz1,   cx2, cy1, cz1,   cx2, cy1, cz2,
+              cx1, cy1, cz1,   cx2, cy1, cz2,   cx1, cy1, cz2
+            );
+          }
+
+          // 5. West Wall (gx - 1, left edge of canvas -> cx2 in world, facing +X)
+          if (gx === 0 || gridBack[gy][gx - 1] !== colorIdx) {
+            targetArr.push(
+              cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
+              cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
+            );
+          }
+
+          // 6. East Wall (gx + 1, right edge of canvas -> cx1 in world, facing -X)
+          if (gx === sampleW - 1 || gridBack[gy][gx + 1] !== colorIdx) {
+            targetArr.push(
+              cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
+              cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
+            );
+          }
+        }
+      }
+    }
+
+    const colorMaterials: Record<number, number> = {
+      1: 0x1e1e1e, // Black Text / Border / Logo
+      2: 0xe11d48, // Flag Red
+      3: 0xf59e0b, // Flag Yellow / Gold
+    };
+
+    for (const [cIdxStr, posArray] of Object.entries(positionsByColor)) {
+      const cIdx = Number(cIdxStr);
+      if (posArray.length > 0) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.name = `Relief_Color_${cIdx}`;
+        printableGroup.add(mesh);
       }
     }
 
@@ -1092,9 +1281,21 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   };
 
   // Export 3D 3MF format (Native BambuStudio / PrusaSlicer format for Bambu Lab P2S)
-  const handleExport3MF = () => {
+  const handleExport3MF = async () => {
     setIsExporting('3mf');
     try {
+      const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
+      if (hasLogo && (!logoImgRef.current || !logoImgRef.current.complete || logoImgRef.current.naturalWidth === 0)) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = `${import.meta.env.BASE_URL}logos/${config.backSideLogo}.svg`;
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+        logoImgRef.current = img;
+      }
+
       const printableGroup = buildPrintable3DGroup();
 
       let baseColorHex = '#FFFFFF';
@@ -1103,9 +1304,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       else if (config.material === 'carbon') baseColorHex = '#27272A';
       else if (config.material === 'chrome') baseColorHex = '#CBD5E1';
 
-      let verticesXml = '';
-      let trianglesXml = '';
-      let vertexOffset = 0;
+      let objectsXml = '';
+      let componentsXml = '';
+      let objectIdCounter = 2;
 
       printableGroup.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -1115,22 +1316,27 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
           const posAttr = geometry.attributes.position;
           const indexAttr = geometry.index;
-          
+
           let colorIndex = 0;
           if (mesh.name.startsWith('Relief_Color_')) {
             colorIndex = parseInt(mesh.name.replace('Relief_Color_', ''), 10);
           }
 
-          if (posAttr) {
+          if (posAttr && posAttr.count > 0) {
+            const currentObjId = objectIdCounter++;
+            componentsXml += `        <component objectid="${currentObjId}" />\n`;
+
+            let partVerticesXml = '';
             for (let i = 0; i < posAttr.count; i++) {
               const x = posAttr.getX(i);
               const y = posAttr.getY(i);
               const z = posAttr.getZ(i);
-              verticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
+              partVerticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
             }
 
+            let partTrianglesXml = '';
             const writeTriangle = (a: number, b: number, c: number) => {
-              trianglesXml += `        <triangle v1="${a + vertexOffset}" v2="${b + vertexOffset}" v3="${c + vertexOffset}" pid="1" p1="${colorIndex}" />\n`;
+              partTrianglesXml += `        <triangle v1="${a}" v2="${b}" v3="${c}" pid="1" p1="${colorIndex}" />\n`;
             };
 
             if (indexAttr) {
@@ -1143,7 +1349,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
               }
             }
 
-            vertexOffset += posAttr.count;
+            objectsXml += `    <object id="${currentObjId}" type="model">
+      <mesh>
+        <vertices>
+${partVerticesXml}        </vertices>
+        <triangles>
+${partTrianglesXml}        </triangles>
+      </mesh>
+    </object>\n`;
           }
         }
       });
@@ -1165,14 +1378,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       <m:color color="#F59E0BFF" />
     </m:colorgroup>
     <object id="1" type="model">
-      <mesh>
-        <vertices>
-${verticesXml}        </vertices>
-        <triangles>
-${trianglesXml}        </triangles>
-      </mesh>
+      <components>
+${componentsXml}      </components>
     </object>
-  </resources>
+${objectsXml}  </resources>
   <build>
     <item objectid="1" />
   </build>
