@@ -4,7 +4,7 @@ import { fetchAdminOrders, updateOrderStatusApi, fetchAdminStats, type AdminStat
 import type { OrderItem } from '../api/orders';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { PlateVisualizer2D } from '../components/PlateVisualizer2D';
+import { PlateVisualizer2D, SVGPlate2D } from '../components/PlateVisualizer2D';
 import { PlateVisualizer3D } from '../components/PlateVisualizer3D';
 
 export const AdminDashboard: React.FC = () => {
@@ -19,6 +19,8 @@ export const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForModal, setSelectedOrderForModal] = useState<OrderItem | null>(null);
   const [modalViewMode, setModalViewMode] = useState<'3d' | '2d'>('3d');
+
+  const [viewType, setViewType] = useState<'cards' | 'table'>('cards');
 
   const loadData = useCallback(async () => {
     if (!user?.isAdmin) return;
@@ -60,6 +62,21 @@ export const AdminDashboard: React.FC = () => {
 
   const handlePrintManifest = () => {
     window.print();
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   if (!user || !user.isAdmin) {
@@ -143,12 +160,12 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Filter Toolbar */}
       <div className="glass-elevated" style={{ padding: '16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1, width: '100%' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1, width: '100%', alignItems: 'center' }}>
           
           {/* Status Filter */}
           <select
             className="input-field"
-            style={{ width: 'auto', minWidth: '150px', flex: 1 }}
+            style={{ width: 'auto', minWidth: '150px' }}
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
           >
@@ -161,7 +178,7 @@ export const AdminDashboard: React.FC = () => {
           </select>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', flex: 2, minWidth: '200px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
             <input
               type="text"
               className="input-field"
@@ -172,74 +189,56 @@ export const AdminDashboard: React.FC = () => {
             <Search size={16} style={{ position: 'absolute', right: '14px', top: '14px', color: 'var(--text-dim)' }} />
           </div>
 
+          {/* View Mode Switcher */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '10px' }}>
+            <button
+              className={`btn ${viewType === 'cards' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+              onClick={() => setViewType('cards')}
+            >
+              <Package size={14} /> Карточки
+            </button>
+            <button
+              className={`btn ${viewType === 'table' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+              onClick={() => setViewType('table')}
+            >
+              <Printer size={14} /> Таблица
+            </button>
+          </div>
+
         </div>
       </div>
 
-      {/* Orders List Table */}
-      <div className="glass-elevated" style={{ padding: '0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: '700px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-            <thead>
-              <tr style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '14px 18px' }}>№ Заказа</th>
-                <th style={{ padding: '14px 18px' }}>Гос Номер</th>
-                <th style={{ padding: '14px 18px' }}>Клиент / Адрес</th>
-                <th style={{ padding: '14px 18px' }}>Воскресная Доставка</th>
-                <th style={{ padding: '14px 18px' }}>Сумма</th>
-                <th style={{ padding: '14px 18px' }}>Статус</th>
-                <th style={{ padding: '14px 18px' }}>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    Заказы не найдены.
-                  </td>
-                </tr>
-              ) : (
-                orders.map(order => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
-                    
-                    <td style={{ padding: '14px 18px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
-                      #{order.orderNumber}
-                    </td>
+      {/* Orders List View */}
+      {viewType === 'cards' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {orders.length === 0 ? (
+            <div className="glass-elevated" style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Заказы не найдены.
+            </div>
+          ) : (
+            orders.map(order => (
+              <div key={order.id} className="glass-elevated" style={{ padding: '24px', borderRadius: '16px' }}>
+                {/* Order Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>
+                        Заказ #{order.orderNumber}
+                      </h3>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      Оформлен: {formatDate(order.createdAt)}
+                    </div>
+                  </div>
 
-                    <td style={{ padding: '14px 18px' }}>
-                      <div className="plate-font" style={{ fontSize: '1rem', fontWeight: 900, background: '#ffffff', color: '#000000', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', border: '1px solid #000' }}>
-                        {order.regionCode} {order.plateNumber}
-                      </div>
-                      {order.backSideText && (
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Оборот: {order.backSideText}
-                        </div>
-                      )}
-                    </td>
-
-                    <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontWeight: 700 }}>{order.customerName}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Phone size={12} /> {order.customerPhone}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <MapPin size={12} /> {order.city}, {order.customerAddress}
-                      </div>
-                    </td>
-
-                    <td style={{ padding: '14px 18px' }}>
-                      <span className="badge badge-sunday">
-                        <Truck size={12} /> {order.sundayDeliveryDate}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '14px 18px', fontWeight: 800, color: '#f43f5e' }}>
-                      {order.totalPrice} сом
-                    </td>
-
-                    <td style={{ padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Статус заказа:</span>
                       <select
                         className="input-field"
-                        style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                        style={{ padding: '6px 12px', fontSize: '0.82rem' }}
                         value={order.status}
                         onChange={e => handleStatusChange(order.id, e.target.value as any)}
                       >
@@ -249,25 +248,185 @@ export const AdminDashboard: React.FC = () => {
                         <option value="delivered">Доставлен</option>
                         <option value="cancelled">Отменен</option>
                       </select>
-                    </td>
+                    </div>
 
-                    <td style={{ padding: '14px 18px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Сумма к оплате:</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f43f5e' }}>
+                        {order.totalPrice} сом
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid Content */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  {/* Plate Preview - Identical to My Orders */}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Макет брелка:</span>
+                    <PlateVisualizer2D
+                      config={{
+                        plateNumber: order.plateNumber,
+                        regionCode: order.regionCode,
+                        plateType: order.plateType as any,
+                        backSideText: order.backSideText || '',
+                        backSideLogo: order.backSideLogo || 'none',
+                        material: order.material as any,
+                      }}
+                    />
+                  </div>
+
+                  {/* Details Summary */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <Package size={16} color="var(--text-muted)" style={{ marginTop: '2px' }} />
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Получатель:</span>{' '}
+                        <strong>{order.customerName}</strong> ({order.customerPhone})
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <MapPin size={16} color="var(--text-muted)" style={{ marginTop: '2px' }} />
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Адрес доставки:</span>{' '}
+                        <strong>г. {order.city}, {order.customerAddress}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <Truck size={16} color="var(--text-muted)" style={{ marginTop: '2px' }} />
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Воскресная доставка:</span>{' '}
+                        <strong>{order.sundayDeliveryDate}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.06)', padding: '4px 10px', borderRadius: '6px' }}>
+                        Материал: {order.material} | Тип: {order.plateType}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
                       <button
                         className="btn btn-secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                        style={{ width: '100%', padding: '8px', fontSize: '0.85rem' }}
                         onClick={() => setSelectedOrderForModal(order)}
                       >
-                        Просмотр макета
+                        3D Модель и Экспорт Файла
                       </button>
-                    </td>
-
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      </div>
+      ) : (
+        /* Orders List Table */
+        <div className="glass-elevated" style={{ padding: '0', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ minWidth: '700px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '14px 18px' }}>№ Заказа</th>
+                  <th style={{ padding: '14px 18px' }}>Гос Номер</th>
+                  <th style={{ padding: '14px 18px' }}>Клиент / Адрес</th>
+                  <th style={{ padding: '14px 18px' }}>Воскресная Доставка</th>
+                  <th style={{ padding: '14px 18px' }}>Сумма</th>
+                  <th style={{ padding: '14px 18px' }}>Статус</th>
+                  <th style={{ padding: '14px 18px' }}>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      Заказы не найдены.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map(order => (
+                    <tr key={order.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
+                      
+                      <td style={{ padding: '14px 18px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+                        #{order.orderNumber}
+                      </td>
+
+                      <td style={{ padding: '14px 18px', minWidth: '190px' }}>
+                        <div style={{ width: '170px' }}>
+                          <SVGPlate2D
+                            config={{
+                              plateNumber: order.plateNumber,
+                              regionCode: order.regionCode,
+                              plateType: order.plateType as any,
+                              backSideText: order.backSideText || '',
+                              backSideLogo: order.backSideLogo || 'none',
+                              material: order.material as any,
+                            }}
+                          />
+                        </div>
+                        {order.backSideText && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            Оборот: {order.backSideText}
+                          </div>
+                        )}
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <div style={{ fontWeight: 700 }}>{order.customerName}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Phone size={12} /> {order.customerPhone}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <MapPin size={12} /> {order.city}, {order.customerAddress}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <span className="badge badge-sunday">
+                          <Truck size={12} /> {order.sundayDeliveryDate}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '14px 18px', fontWeight: 800, color: '#f43f5e' }}>
+                        {order.totalPrice} сом
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <select
+                          className="input-field"
+                          style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                          value={order.status}
+                          onChange={e => handleStatusChange(order.id, e.target.value as any)}
+                        >
+                          <option value="pending">Ожидает</option>
+                          <option value="in_production">В производстве</option>
+                          <option value="shipped_for_sunday">Передан на Воскресенье</option>
+                          <option value="delivered">Доставлен</option>
+                          <option value="cancelled">Отменен</option>
+                        </select>
+                      </td>
+
+                      <td style={{ padding: '14px 18px' }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                          onClick={() => setSelectedOrderForModal(order)}
+                        >
+                          Просмотр макета
+                        </button>
+                      </td>
+
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modal preview of order with 3D Export capability */}
       {selectedOrderForModal && (
