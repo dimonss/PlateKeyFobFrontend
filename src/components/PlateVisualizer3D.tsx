@@ -812,14 +812,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     }
   };
 
-  // Helper to construct a flat, 100mm 3D printable solid mesh with real 3D raised text, borders & multi-color flag
+  // Helper to construct a flat, 1:10 scale (52mm x 11.2mm x 3.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
   const buildPrintable3DGroup = (): THREE.Group => {
     const printableGroup = new THREE.Group();
 
-    const width = 100.0;
-    const height = 23.0;
-    const radius = 2.5;
-    const baseThickness = 3.0;
+    const width = 52.0;    // 52.0 mm length (exact 1:10 scale of 520mm)
+    const height = 11.2;   // 11.2 mm height (exact 1:10 scale of 112mm)
+    const radius = 1.3;    // 1.3 mm corner radius
+    const baseThickness = 3.0; // 3.0 mm base thickness
 
     const shape = new THREE.Shape();
     const x = -width / 2;
@@ -835,9 +835,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     shape.lineTo(x, y + radius);
     shape.quadraticCurveTo(x, y, x + radius, y);
 
-    // Keyring hole at top-right (positioned tangent along top-right inner black line)
+    // Keyring hole at top-right (positioned symmetrically relative to top and right black frame lines)
     const holePath = new THREE.Path();
-    holePath.absarc(44.5, 7.6, 2.0, 0, Math.PI * 2, true);
+    holePath.absarc(23.8, 3.4, 1.05, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
 
     const extrudeSettings = {
@@ -845,8 +845,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       bevelEnabled: true,
       bevelSegments: 2,
       steps: 1,
-      bevelSize: 0.3,
-      bevelThickness: 0.3,
+      bevelSize: 0.2,
+      bevelThickness: 0.2,
     };
 
     let baseColorHex = 0xffffff;
@@ -861,14 +861,117 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     baseMesh.name = 'BasePlate_Color_0';
     printableGroup.add(baseMesh);
 
-    // 2. High-Definition 3D Relief Mesh (Full 1060 x 244 Resolution = 0.09mm ultra-fine detail)
-    const frontCanvas = createTextureCanvas(false);
-    const sampleW = 1060;
-    const sampleH = 244;
+    // 2. High-Definition 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
+    const cleanCanvas = document.createElement('canvas');
+    cleanCanvas.width = 1060;
+    cleanCanvas.height = 244;
+    const cleanCtx = cleanCanvas.getContext('2d');
 
-    const ctx = frontCanvas.getContext('2d');
-    if (ctx) {
-      const imgData = ctx.getImageData(0, 0, sampleW, sampleH);
+    if (cleanCtx) {
+      // Fill canvas background with pure white so no material textures or outer squares get extruded
+      cleanCtx.fillStyle = '#FFFFFF';
+      cleanCtx.fillRect(0, 0, 1060, 244);
+
+      // Draw inner plate base white
+      cleanCtx.save();
+      cleanCtx.beginPath();
+      if (typeof cleanCtx.roundRect === 'function') {
+        cleanCtx.roundRect(10, 10, 1040, 224, 16);
+      } else {
+        cleanCtx.rect(10, 10, 1040, 224);
+      }
+      cleanCtx.fillStyle = '#FFFFFF';
+      cleanCtx.fill();
+      cleanCtx.restore();
+
+      // Black frame line
+      cleanCtx.save();
+      cleanCtx.strokeStyle = '#1E1E1E';
+      cleanCtx.lineWidth = 9;
+      cleanCtx.beginPath();
+      drawRoundedRect(cleanCtx, 14.5, 14.5, 1031, 215, 12);
+      cleanCtx.stroke();
+      cleanCtx.restore();
+
+      // Vertical separator line
+      cleanCtx.save();
+      cleanCtx.strokeStyle = '#1E1E1E';
+      cleanCtx.lineWidth = 9;
+      cleanCtx.beginPath();
+      cleanCtx.moveTo(290, 10);
+      cleanCtx.lineTo(290, 234);
+      cleanCtx.stroke();
+      cleanCtx.restore();
+
+      // Region code
+      cleanCtx.save();
+      cleanCtx.fillStyle = '#1E1E1E';
+      cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+      cleanCtx.textAlign = 'center';
+      cleanCtx.textBaseline = 'alphabetic';
+      cleanCtx.fillText(config.regionCode, 150, 124);
+      cleanCtx.restore();
+
+      // Flag of Kyrgyz Republic
+      const flagX = 66;
+      const flagY = 154;
+      const flagW = 80;
+      const flagH = 52;
+      cleanCtx.save();
+      cleanCtx.beginPath();
+      drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 3);
+      cleanCtx.clip();
+      cleanCtx.fillStyle = '#E11D48';
+      cleanCtx.fillRect(flagX, flagY, flagW, flagH);
+      // Yellow sun emblem circle
+      cleanCtx.fillStyle = '#F59E0B';
+      cleanCtx.beginPath();
+      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 14, 0, Math.PI * 2);
+      cleanCtx.fill();
+      cleanCtx.restore();
+
+      // "KG" text
+      cleanCtx.save();
+      cleanCtx.fillStyle = '#1E1E1E';
+      cleanCtx.font = "700 60px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
+      cleanCtx.textAlign = 'left';
+      cleanCtx.fillText('KG', 162, 202);
+      cleanCtx.restore();
+
+      // Main plate number
+      cleanCtx.save();
+      const parsed = parsePlateText(config.plateNumber);
+      if (parsed.isStandard) {
+        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        const digitsW = cleanCtx.measureText(parsed.digits).width;
+        cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        const lettersW = parsed.letters ? cleanCtx.measureText(parsed.letters).width : 0;
+        const dx = 48;
+        const totalW = digitsW + (parsed.letters ? dx + lettersW : 0);
+        const startX = 670 - totalW / 2;
+        cleanCtx.fillStyle = '#1E1E1E';
+        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        cleanCtx.textAlign = 'left';
+        cleanCtx.textBaseline = 'alphabetic';
+        cleanCtx.fillText(parsed.digits, startX, 194);
+        if (parsed.letters) {
+          cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+          cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
+        }
+      } else {
+        const textLen = parsed.digits.length;
+        const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
+        cleanCtx.fillStyle = '#1E1E1E';
+        cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.textAlign = 'center';
+        cleanCtx.textBaseline = 'alphabetic';
+        cleanCtx.fillText(parsed.digits, 670, 192);
+      }
+      cleanCtx.restore();
+
+      const sampleW = 1060;
+      const sampleH = 244;
+      const imgData = cleanCtx.getImageData(0, 0, sampleW, sampleH);
       const pixels = imgData.data;
 
       const cellW = width / sampleW;
@@ -912,15 +1015,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const cy1 = height / 2 - (gy + 1) * cellH;
           const cy2 = cy1 + cellH;
 
-          // Only skip pixels inside the 2.0mm physical keyring hole cutout
-          const distHole = Math.hypot((cx1 + cx2) / 2 - 44.5, (cy1 + cy2) / 2 - 7.6);
-          if (distHole <= 1.95) continue;
+          // Only skip pixels inside the physical keyring hole cutout (23.8mm, 3.2mm, r=1.05mm)
+          const distHole = Math.hypot((cx1 + cx2) / 2 - 23.8, (cy1 + cy2) / 2 - 3.2);
+          if (distHole <= 1.0) continue;
 
-          // Protrusion height: 0.6 mm for crisp, clean 3D printing
+          // Protrusion height: 0.6 mm for crisp 3D printing
           const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.4 : 0.6;
           const cz1 = baseThickness; // 3.0 mm (Base plate level)
           const cz2 = baseThickness + reliefH; // 3.6 mm (Top face level)
-          const bevel = 0.25; // 0.25 mm chamfer / bevel offset (фаска)
+          const bevel = 0.12; // 0.12 mm chamfer / bevel offset (фаска)
 
           const targetArr = positionsByColor[colorIdx];
 
@@ -930,7 +1033,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
           );
 
-          // 2. North Chamfer Wall (gy - 1, sloped outward by bevel at cz1)
+          // 2. North Chamfer Wall (gy - 1)
           if (gy === 0 || grid[gy - 1][gx] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
@@ -938,7 +1041,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 3. South Chamfer Wall (gy + 1, sloped outward by bevel at cz1)
+          // 3. South Chamfer Wall (gy + 1)
           if (gy === sampleH - 1 || grid[gy + 1][gx] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy1 - bevel, cz1,   cx2, cy1, cz2,                   cx2 + bevel, cy1 - bevel, cz1,
@@ -946,7 +1049,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 4. West Chamfer Wall (gx - 1, sloped outward by bevel at cz1)
+          // 4. West Chamfer Wall (gx - 1)
           if (gx === 0 || grid[gy][gx - 1] !== colorIdx) {
             targetArr.push(
               cx1 - bevel, cy1 - bevel, cz1,   cx1, cy2, cz2,                   cx1 - bevel, cy2 + bevel, cz1,
@@ -954,7 +1057,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             );
           }
 
-          // 5. East Chamfer Wall (gx + 1, sloped outward by bevel at cz1)
+          // 5. East Chamfer Wall (gx + 1)
           if (gx === sampleW - 1 || grid[gy][gx + 1] !== colorIdx) {
             targetArr.push(
               cx2 + bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
@@ -1253,7 +1356,7 @@ ${trianglesXml}        </triangles>
                 <Info size={14} color="#10b981" /> Рекомендуемые настройки в BambuStudio для P2S:
               </div>
               <ul style={{ margin: 0, paddingLeft: '18px' }}>
-                <li><strong>Размер модели:</strong> 100.0 × 23.0 × 4.0 мм (1:1 точный пропорциональный размер брелка в мм)</li>
+                <li><strong>Размер модели:</strong> 52.0 × 11.2 × 3.6 мм (точный 1:10 масштаб реального гос номера)</li>
                 <li><strong>Принтер:</strong> Bambu Lab P2S | <strong>Сопло:</strong> 0.4 мм (или 0.2 мм для сверхчеткого текста)</li>
                 <li><strong>Высота слоя (Layer height):</strong> 0.12 мм — 0.16 мм High Detail</li>
                 <li><strong>Заполнение (Infill):</strong> 20% Gyroid | <strong>Стенки (Wall loops):</strong> 3-4</li>
