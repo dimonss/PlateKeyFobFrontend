@@ -26,9 +26,10 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
         {/* Brand Logo */}
         <div
           onClick={() => handleTabClick('customizer')}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
         >
           <div
+            className="brand-icon"
             style={{
               width: '38px',
               height: '38px',
@@ -42,14 +43,14 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
               flexShrink: 0,
             }}
           >
-            <Key size={20} />
+            <Key size={18} />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              PLATE<span style={{ color: '#f43f5e' }}>KEYCHAIN</span>
-              <span className="badge badge-sunday" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>KG</span>
+            <div className="brand-logo-text" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>PLATE</span>
+              <span className="brand-keychain-text" style={{ color: '#f43f5e' }}>KEYCHAIN</span>
             </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Кыргызские Гос Номера</div>
+            <div className="brand-subtext" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Кыргызские Гос Номера</div>
           </div>
         </div>
 
@@ -93,9 +94,9 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
         </nav>
 
         {/* User & Theme Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary header-btn-action"
             onClick={toggleTheme}
             style={{ padding: '8px 12px', fontSize: '0.85rem', minHeight: '38px' }}
             title="Сменить тему"
@@ -104,9 +105,9 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
           </button>
 
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-input)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-input)', padding: '6px 10px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <User size={16} color="#f43f5e" />
-              <div style={{ fontSize: '0.82rem', fontWeight: 600, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 600, maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.firstName}
               </div>
               <button
@@ -119,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
             </div>
           ) : (
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary header-btn-action"
               onClick={onOpenAuth}
               style={{ padding: '8px 14px', fontSize: '0.85rem', minHeight: '38px' }}
             >
@@ -129,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
 
           {/* Mobile Hamburger Toggle Button */}
           <button
-            className="btn btn-secondary show-mobile"
+            className="btn btn-secondary show-mobile header-btn-action"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             style={{ padding: '8px 10px', minHeight: '38px' }}
             aria-label="Меню"
@@ -137,45 +138,44 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-
-        {/* Mobile Menu Drawer Dropdown */}
-        {isMobileMenuOpen && (
-          <div className="mobile-menu-drawer show-mobile">
-            <button
-              className={`btn ${activeTab === 'customizer' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleTabClick('customizer')}
-            >
-              <Key size={16} /> Конструктор Брелка
-            </button>
-
-            <button
-              className={`btn ${activeTab === 'track' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleTabClick('track')}
-            >
-              <Search size={16} /> Отследить Заказ
-            </button>
-
-            {user && (
-              <button
-                className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => handleTabClick('orders')}
-              >
-                <Package size={16} /> Мои Заказы
-              </button>
-            )}
-
-            {user?.isAdmin && (
-              <button
-                className={`btn ${activeTab === 'admin' ? 'btn-gold' : 'btn-secondary'}`}
-                onClick={() => handleTabClick('admin')}
-              >
-                <ShieldCheck size={16} /> Админ-Панель
-              </button>
-            )}
-          </div>
-        )}
-
       </div>
+
+      {/* Mobile Menu Drawer Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="mobile-menu-drawer show-mobile">
+          <button
+            className={`btn ${activeTab === 'customizer' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => handleTabClick('customizer')}
+          >
+            <Key size={16} /> Конструктор Брелка
+          </button>
+
+          <button
+            className={`btn ${activeTab === 'track' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => handleTabClick('track')}
+          >
+            <Search size={16} /> Отследить Заказ
+          </button>
+
+          {user && (
+            <button
+              className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => handleTabClick('orders')}
+            >
+              <Package size={16} /> Мои Заказы
+            </button>
+          )}
+
+          {user?.isAdmin && (
+            <button
+              className={`btn ${activeTab === 'admin' ? 'btn-gold' : 'btn-secondary'}`}
+              onClick={() => handleTabClick('admin')}
+            >
+              <ShieldCheck size={16} /> Админ-Панель
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 };

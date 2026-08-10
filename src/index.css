@@ -542,16 +542,17 @@ body {
   }
 
   .header-content {
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
   }
 
   .mobile-menu-drawer {
     display: flex;
     flex-direction: column;
     width: 100%;
+    max-width: 1200px;
+    margin: 12px auto 0;
     gap: 8px;
-    margin-top: 14px;
-    padding-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid var(--border-color);
     animation: fadeIn 0.2s ease forwards;
   }
@@ -632,13 +633,134 @@ body {
 
 @media (max-width: 480px) {
   .badge-sunday {
-    font-size: 0.6rem !important;
+    font-size: 0.65rem !important;
     padding: 2px 6px !important;
   }
 
   .plate-font {
     letter-spacing: 0.03em !important;
   }
+
+  .header-container {
+    padding: 8px 12px !important;
+  }
+
+  .brand-logo-text {
+    font-size: 0.85rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0px !important;
+    line-height: 1.0 !important;
+  }
+
+  .brand-keychain-text {
+    font-size: 0.8rem !important;
+  }
+
+  .brand-subtext {
+    display: none !important;
+  }
+
+  .brand-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .header-actions {
+    gap: 6px !important;
+  }
+
+  .header-btn-action {
+    padding: 6px 10px !important;
+    min-height: 34px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Sunday Delivery Notice Card Mobile Styling */
+  .sunday-notice-card {
+    padding: 14px 14px !important;
+  }
+
+  .sunday-notice-content {
+    gap: 12px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .sunday-notice-header {
+    gap: 10px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .sunday-notice-header > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .sunday-notice-icon {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .sunday-notice-title {
+    font-size: 0.88rem !important;
+    text-align: center !important;
+  }
+
+  .sunday-notice-batch-text {
+    font-size: 0.72rem !important;
+  }
+
+  .sunday-notice-timer {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 10px 12px !important;
+    gap: 6px !important;
+  }
+
+  .sunday-notice-timer-label {
+    font-size: 0.78rem !important;
+    justify-content: center !important;
+  }
+
+  .sunday-notice-timer-digits {
+    font-size: 0.88rem !important;
+    justify-content: center !important;
+    align-self: center !important;
+  }
 }
+
+@media (max-width: 380px) {
+  .header-container {
+    padding: 6px 8px !important;
+  }
+
+  .brand-logo-text {
+    font-size: 0.8rem !important;
+  }
+
+  .brand-keychain-text {
+    font-size: 0.75rem !important;
+  }
+
+  .sunday-notice-timer {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .sunday-notice-timer-digits {
+    font-size: 0.85rem !important;
+    align-self: center !important;
+  }
+}
+
 
 

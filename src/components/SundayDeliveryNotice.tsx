@@ -56,9 +56,10 @@ export const SundayDeliveryNotice: React.FC = () => {
 
   return (
     <div className="sunday-notice-card glass-elevated" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div className="sunday-notice-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="sunday-notice-header" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div
+            className="sunday-notice-icon"
             style={{
               width: '46px',
               height: '46px',
@@ -68,27 +69,28 @@ export const SundayDeliveryNotice: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               color: '#f43f5e',
+              flexShrink: 0,
             }}
           >
             <Truck size={24} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span className="badge badge-sunday">Правило доставки</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Все заказы отправляются батчем</span>
+              <span className="sunday-notice-batch-text" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Все заказы отправляются батчем</span>
             </div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginTop: '2px', color: 'var(--text-main)' }}>
+            <h4 className="sunday-notice-title" style={{ fontSize: '1rem', fontWeight: 700, marginTop: '2px', color: 'var(--text-main)' }}>
               Ближайшая доставка: <span style={{ color: '#f43f5e' }}>Воскресенье, {formatSundayText(nextSunday)}</span>
             </h4>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--bg-input)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            <Clock size={16} color="#f43f5e" />
+        <div className="sunday-notice-timer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-input)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <div className="sunday-notice-timer-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <Clock size={16} color="#f43f5e" style={{ flexShrink: 0 }} />
             <span>До выезда курьеров:</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+          <div className="sunday-notice-timer-digits" style={{ display: 'flex', gap: '4px', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
             <span>{timeLeft.days}д</span>:
             <span>{String(timeLeft.hours).padStart(2, '0')}ч</span>:
             <span>{String(timeLeft.minutes).padStart(2, '0')}м</span>:
