@@ -651,6 +651,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       };
 
       const domElement = renderer.domElement;
+      domElement.style.touchAction = 'none';
       domElement.addEventListener('mousedown', onMouseDown);
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
@@ -666,6 +667,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
       const onTouchMove = (e: TouchEvent) => {
         if (!isDragging || e.touches.length !== 1) return;
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         const deltaX = e.touches[0].clientX - previousMousePosition.x;
         const deltaY = e.touches[0].clientY - previousMousePosition.y;
 
@@ -683,8 +687,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
       };
 
-      domElement.addEventListener('touchstart', onTouchStart);
-      window.addEventListener('touchmove', onTouchMove);
+      domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
       window.addEventListener('touchend', onTouchEnd);
 
       // Responsive Canvas Resize Observer
@@ -1501,6 +1505,7 @@ ${objectsXml}  </resources>
           borderRadius: '16px',
           overflow: 'hidden',
           position: 'relative',
+          touchAction: 'none',
         }}
       />
 
