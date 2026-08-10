@@ -21,10 +21,10 @@ const REGIONS = [
 ];
 
 const MATERIALS = [
-  { id: 'chrome', name: 'Пластик', price: 500, color: '#e2e8f0' },
+  { id: 'plastic', name: 'Пластик', price: 400, color: '#e2e8f0' },
   { id: 'black_matte', name: 'Матовый Магнит', price: 500, color: '#111827' },
-  { id: 'gold_edge', name: 'Золотая Кайма', price: 650, color: '#f59e0b' },
-  { id: 'carbon', name: 'Карбоновый Микс', price: 700, color: '#374151' },
+  { id: 'gold_edge', name: 'Золотая Кайма', price: 600, color: '#f59e0b' },
+  { id: 'carbon', name: 'Карбоновый Микс', price: 600, color: '#374151' },
 ];
 
 const CAR_LOGOS = [
@@ -49,16 +49,15 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
     plateType: 'standard',
     backSideText: '+996 555 123 456',
     backSideLogo: 'bmw',
-    material: 'chrome',
+    material: 'plastic',
   });
 
   // Calculate dynamic price
   const calculatePrice = () => {
-    let price = 500;
+    let price = 400;
     const selectedMat = MATERIALS.find(m => m.id === config.material);
     if (selectedMat) price = selectedMat.price;
 
-    if (config.backSideText.trim().length > 0) price += 100;
     return price;
   };
 
@@ -201,7 +200,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
               {MATERIALS.map(mat => {
-                const isDefault = mat.id === 'chrome'; // Хром Сталь / Пластик по умолчанию
+                const isDefault = mat.id === 'plastic'; // Пластик по умолчанию
                 return (
                   <div
                     key={mat.id}

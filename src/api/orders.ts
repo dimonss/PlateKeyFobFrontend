@@ -35,7 +35,7 @@ export interface CreateOrderPayload {
   plateType?: 'standard' | 'old' | 'vip';
   backSideText?: string | null;
   backSideLogo?: string;
-  material?: 'chrome' | 'black_matte' | 'gold_edge' | 'carbon';
+  material?: 'plastic' | 'black_matte' | 'gold_edge' | 'carbon';
   quantity?: number;
   paymentMethod?: 'cash_on_delivery' | 'mbank' | 'optima_qr';
 }

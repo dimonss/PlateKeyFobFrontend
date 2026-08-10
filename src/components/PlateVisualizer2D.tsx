@@ -7,7 +7,7 @@ export interface PlateConfig {
   plateType: 'standard' | 'old' | 'vip';
   backSideText: string;
   backSideLogo: string;
-  material: 'chrome' | 'black_matte' | 'gold_edge' | 'carbon';
+  material: 'plastic' | 'black_matte' | 'gold_edge' | 'carbon';
 }
 
 const REGION_NAMES: Record<string, string> = {
@@ -264,7 +264,7 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
           boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
           border: '2px solid #52525b',
         };
-      case 'chrome':
+      case 'plastic':
       default:
         return {
           background: 'linear-gradient(135deg, #e2e8f0 0%, #ffffff 30%, #cbd5e1 50%, #f8fafc 70%, #94a3b8 100%)',

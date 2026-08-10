@@ -905,7 +905,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     if (config.material === 'black_matte') baseColorHex = 0x1f2937;
     else if (config.material === 'gold_edge') baseColorHex = 0xffd700;
     else if (config.material === 'carbon') baseColorHex = 0x27272a;
-    else if (config.material === 'chrome') baseColorHex = 0xcbd5e1;
+    else if (config.material === 'plastic') baseColorHex = 0xcbd5e1;
 
     const baseGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     const baseMat = new THREE.MeshStandardMaterial({ color: baseColorHex, roughness: 0.3 });
@@ -1348,7 +1348,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       if (config.material === 'black_matte') baseColorHex = '#1F2937';
       else if (config.material === 'gold_edge') baseColorHex = '#FFD700';
       else if (config.material === 'carbon') baseColorHex = '#27272A';
-      else if (config.material === 'chrome') baseColorHex = '#CBD5E1';
+      else if (config.material === 'plastic') baseColorHex = '#CBD5E1';
 
       let objectsXml = '';
       let componentsXml = '';
