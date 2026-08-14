@@ -1321,6 +1321,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   };
 
   // Export 3D 3MF format (Native BambuStudio / PrusaSlicer format for Bambu Lab P2S)
+  // All meshes merged into a single <mesh> with per-face colors for maximum slicer compatibility
   const handleExport3MF = async () => {
     setIsExporting('3mf');
     try {
@@ -1345,6 +1346,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       }
 
       const printableGroup = buildPrintable3DGroup();
+      printableGroup.updateMatrixWorld(true);
 
       let baseColorHex = '#FFFFFF';
       if (config.material === 'black_matte') baseColorHex = '#1F2937';
@@ -1352,9 +1354,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       else if (config.material === 'carbon') baseColorHex = '#27272A';
       else if (config.material === 'plastic') baseColorHex = '#CBD5E1';
 
-      let objectsXml = '';
-      let componentsXml = '';
-      let objectIdCounter = 2;
+      // Merge all meshes into a single unified mesh with per-face color indices
+      let allVerticesXml = '';
+      let allTrianglesXml = '';
+      let globalVertexOffset = 0;
 
       printableGroup.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -1366,47 +1369,34 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const indexAttr = geometry.index;
 
           let colorIndex = 0;
-          let partName = 'BasePlate';
           if (mesh.name.startsWith('Relief_Color_')) {
             colorIndex = parseInt(mesh.name.replace('Relief_Color_', ''), 10);
-            partName = colorIndex === 1 ? 'Relief_Black' : colorIndex === 2 ? 'Relief_Red' : 'Relief_Yellow';
           }
 
           if (posAttr && posAttr.count > 0) {
-            const currentObjId = objectIdCounter++;
-            componentsXml += `        <component objectid="${currentObjId}" />\n`;
-
-            let partVerticesXml = '';
+            // Append vertices with global offset tracking
             for (let i = 0; i < posAttr.count; i++) {
               const x = posAttr.getX(i);
               const y = posAttr.getY(i);
               const z = posAttr.getZ(i);
-              partVerticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
+              allVerticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
             }
 
-            let partTrianglesXml = '';
-            const writeTriangle = (a: number, b: number, c: number) => {
-              partTrianglesXml += `        <triangle v1="${a}" v2="${b}" v3="${c}" pid="1" p1="${colorIndex}" />\n`;
-            };
-
+            // Append triangles with offset vertex indices and per-face color
             if (indexAttr) {
               for (let i = 0; i < indexAttr.count; i += 3) {
-                writeTriangle(indexAttr.getX(i), indexAttr.getX(i + 1), indexAttr.getX(i + 2));
+                const v1 = indexAttr.getX(i) + globalVertexOffset;
+                const v2 = indexAttr.getX(i + 1) + globalVertexOffset;
+                const v3 = indexAttr.getX(i + 2) + globalVertexOffset;
+                allTrianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" pid="1" p1="${colorIndex}" />\n`;
               }
             } else {
               for (let i = 0; i < posAttr.count; i += 3) {
-                writeTriangle(i, i + 1, i + 2);
+                allTrianglesXml += `        <triangle v1="${i + globalVertexOffset}" v2="${i + 1 + globalVertexOffset}" v3="${i + 2 + globalVertexOffset}" pid="1" p1="${colorIndex}" />\n`;
               }
             }
 
-            objectsXml += `    <object id="${currentObjId}" type="model" name="${partName}" pid="1" pindex="${colorIndex}">
-      <mesh>
-        <vertices>
-${partVerticesXml}        </vertices>
-        <triangles>
-${partTrianglesXml}        </triangles>
-      </mesh>
-    </object>\n`;
+            globalVertexOffset += posAttr.count;
           }
         }
       });
@@ -1427,11 +1417,15 @@ ${partTrianglesXml}        </triangles>
       <m:color color="#E11D48FF" />
       <m:color color="#F59E0BFF" />
     </m:colorgroup>
-    <object id="1" type="model">
-      <components>
-${componentsXml}      </components>
+    <object id="1" type="model" pid="1" pindex="0">
+      <mesh>
+        <vertices>
+${allVerticesXml}        </vertices>
+        <triangles>
+${allTrianglesXml}        </triangles>
+      </mesh>
     </object>
-${objectsXml}  </resources>
+  </resources>
   <build>
     <item objectid="1" />
   </build>
