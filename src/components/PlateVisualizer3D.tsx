@@ -862,8 +862,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     } finally {
       setIsExporting(null);
     }
-  };
-  // Helper to construct a flat, 1:10 scale (52mm x 11.2mm x 3.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
+  };  // Helper to construct a flat, 1:10 scale (52mm x 11.2mm x 3.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
   const buildPrintable3DGroup = (): THREE.Group => {
     const printableGroup = new THREE.Group();
 
@@ -873,7 +872,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const baseThickness = 3.0; // 3.0 mm base thickness
     const holeX = 23.8;    // 23.8 mm hole center X
     const holeY = 3.4;     // 3.4 mm hole center Y
-    const holeRadius = 1.1; // 1.1 mm hole radius (2.2 mm diameter through-hole)
+    const holeRadius = 1.15; // 1.15 mm hole radius (2.3 mm diameter through-hole)
 
     // 1. Base Plate Solid Body with Keyring Hole
     const shape = new THREE.Shape();
@@ -893,7 +892,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     // Keyring hole at top-right (through-hole with smooth 32 segments)
     const holePath = new THREE.Path();
     holePath.absarc(holeX, holeY, holeRadius, 0, Math.PI * 2, true);
-    shape.holes.push(holePath);
+    shape.holes = [holePath];
 
     const extrudeSettings = {
       depth: baseThickness,
@@ -915,8 +914,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     printableGroup.add(baseMesh);
 
     const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
-    const sampleW = 530;
-    const sampleH = 122;
+    const sampleW = 1060;
+    const sampleH = 244;
     const cellW = width / sampleW;
     const cellH = height / sampleH;
 
@@ -974,7 +973,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           }
         }
 
-        // 3. Side Walls (North, South, West, East) connecting cz1 to cz2
+        // 3. Side Walls (North, South, West, East) connecting cz1 to cz2 with correct outward normals
         for (let gy = 0; gy < sampleH; gy++) {
           for (let gx = 0; gx < sampleW; gx++) {
             if (grid[gy][gx] !== cIdx) continue;
@@ -993,7 +992,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
               cx2 = width / 2 - gx * cellW;
             }
 
-            // North Wall (facing +Y)
+            // North Wall (facing +Y normal)
             if (gy === 0 || grid[gy - 1][gx] !== cIdx) {
               targetArr.push(
                 cx1, cy2, cz1,   cx2, cy2, cz2,   cx2, cy2, cz1,
@@ -1001,7 +1000,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
               );
             }
 
-            // South Wall (facing -Y)
+            // South Wall (facing -Y normal)
             if (gy === sampleH - 1 || grid[gy + 1][gx] !== cIdx) {
               targetArr.push(
                 cx1, cy1, cz1,   cx2, cy1, cz1,   cx2, cy1, cz2,
@@ -1009,143 +1008,129 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
               );
             }
 
-            if (!isBack) {
-              // West Wall (facing -X)
-              if (gx === 0 || grid[gy][gx - 1] !== cIdx) {
-                targetArr.push(
-                  cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
-                  cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
-                );
-              }
+            // West Wall (facing -X in world space, at cx1)
+            const isWestBoundary = !isBack
+              ? (gx === 0 || grid[gy][gx - 1] !== cIdx)
+              : (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx);
 
-              // East Wall (facing +X)
-              if (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx) {
-                targetArr.push(
-                  cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
-                  cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
-                );
-              }
-            } else {
-              // Inverted left/right for back side
-              // Left edge in back view (facing +X in world)
-              if (gx === 0 || grid[gy][gx - 1] !== cIdx) {
-                targetArr.push(
-                  cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
-                  cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
-                );
-              }
+            if (isWestBoundary) {
+              targetArr.push(
+                cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
+                cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
+              );
+            }
 
-              // Right edge in back view (facing -X in world)
-              if (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx) {
-                targetArr.push(
-                  cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
-                  cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
-                );
-              }
+            // East Wall (facing +X in world space, at cx2)
+            const isEastBoundary = !isBack
+              ? (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx)
+              : (gx === 0 || grid[gy][gx - 1] !== cIdx);
+
+            if (isEastBoundary) {
+              targetArr.push(
+                cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
+                cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
+              );
             }
           }
         }
       }
     };
 
-    // 2. High-Definition FRONT 3D Relief Canvas
+    // 2. High-Definition FRONT 3D Relief Canvas (1060 x 244)
     const cleanCanvas = document.createElement('canvas');
     cleanCanvas.width = sampleW;
     cleanCanvas.height = sampleH;
     const cleanCtx = cleanCanvas.getContext('2d');
 
     if (cleanCtx) {
-      const scaleX = sampleW / 520;
-      const scaleY = sampleH / 112;
-
       cleanCtx.fillStyle = '#FFFFFF';
       cleanCtx.fillRect(0, 0, sampleW, sampleH);
 
       // Black frame line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 4.5 * scaleX;
+      cleanCtx.lineWidth = 9;
       cleanCtx.beginPath();
-      drawRoundedRect(cleanCtx, 2.25 * scaleX, 2.25 * scaleY, 515.5 * scaleX, 107.5 * scaleY, 6 * scaleX);
+      drawRoundedRect(cleanCtx, 14.5, 14.5, 1031, 215, 12);
       cleanCtx.stroke();
       cleanCtx.restore();
 
       // Vertical separator line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 4.5 * scaleX;
+      cleanCtx.lineWidth = 9;
       cleanCtx.beginPath();
-      cleanCtx.moveTo(140 * scaleX, 0);
-      cleanCtx.lineTo(140 * scaleX, 112 * scaleY);
+      cleanCtx.moveTo(290, 10);
+      cleanCtx.lineTo(290, 234);
       cleanCtx.stroke();
       cleanCtx.restore();
 
       // Region code
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.font = `600 ${Math.round(56 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+      cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
       cleanCtx.textAlign = 'center';
       cleanCtx.textBaseline = 'alphabetic';
-      cleanCtx.fillText(config.regionCode || '01', 70 * scaleX, 57 * scaleY);
+      cleanCtx.fillText(config.regionCode || '01', 150, 124);
       cleanCtx.restore();
 
       // Flag of Kyrgyz Republic
-      const flagX = 28 * scaleX;
-      const flagY = 72 * scaleY;
-      const flagW = 40 * scaleX;
-      const flagH = 26 * scaleY;
+      const flagX = 66;
+      const flagY = 154;
+      const flagW = 80;
+      const flagH = 52;
       cleanCtx.save();
       cleanCtx.beginPath();
-      drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 1.5 * scaleX);
+      drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 3);
       cleanCtx.clip();
       cleanCtx.fillStyle = '#E11D48';
       cleanCtx.fillRect(flagX, flagY, flagW, flagH);
       // Yellow sun emblem circle
       cleanCtx.fillStyle = '#F59E0B';
       cleanCtx.beginPath();
-      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 7 * scaleX, 0, Math.PI * 2);
+      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 14, 0, Math.PI * 2);
       cleanCtx.fill();
       cleanCtx.restore();
 
       // "KG" text
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.font = `700 ${Math.round(30 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif`;
+      cleanCtx.font = "700 60px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
       cleanCtx.textAlign = 'left';
       cleanCtx.textBaseline = 'alphabetic';
-      cleanCtx.fillText('KG', 76 * scaleX, 96 * scaleY);
+      cleanCtx.fillText('KG', 162, 202);
       cleanCtx.restore();
 
       // Main plate number
       cleanCtx.save();
       const parsed = parsePlateText(config.plateNumber);
       if (parsed.isStandard) {
-        cleanCtx.font = `600 ${Math.round(92 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         const digitsW = cleanCtx.measureText(parsed.digits).width;
-        cleanCtx.font = `600 ${Math.round(76 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         const lettersW = parsed.letters ? cleanCtx.measureText(parsed.letters).width : 0;
-        const dx = 24 * scaleX;
+        const dx = 48;
         const totalW = digitsW + (parsed.letters ? dx + lettersW : 0);
-        const startX = 330 * scaleX - totalW / 2;
+        const startX = 670 - totalW / 2;
 
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.font = `600 ${Math.round(92 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         cleanCtx.textAlign = 'left';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.fillText(parsed.digits, startX, 92 * scaleY);
+        cleanCtx.fillText(parsed.digits, startX, 194);
 
         if (parsed.letters) {
-          cleanCtx.font = `600 ${Math.round(76 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
-          cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 92 * scaleY);
+          cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+          cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
         }
       } else {
         const textLen = parsed.digits.length;
-        const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * scaleY;
+        const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.font = `600 ${Math.round(fontSize)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'center';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.fillText(parsed.digits, 330 * scaleX, 92 * scaleY);
+        cleanCtx.fillText(parsed.digits, 670, 192);
       }
       cleanCtx.restore();
 
@@ -1189,7 +1174,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       buildWatertightRelief(grid, false, baseThickness - 0.6, baseThickness + 0.6);
     }
 
-    // 3. High-Definition BACK 3D Relief Canvas
+    // 3. High-Definition BACK 3D Relief Canvas (1060 x 244)
     const hasBackContent = (config.backSideText && config.backSideText.trim()) || (config.backSideLogo && config.backSideLogo !== 'none');
     if (hasBackContent) {
       const cleanBackCanvas = document.createElement('canvas');
@@ -1198,18 +1183,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       const cleanBackCtx = cleanBackCanvas.getContext('2d');
 
       if (cleanBackCtx) {
-        const scaleX = sampleW / 520;
-        const scaleY = sampleH / 112;
-
         cleanBackCtx.fillStyle = '#FFFFFF';
         cleanBackCtx.fillRect(0, 0, sampleW, sampleH);
 
         // Black frame line
         cleanBackCtx.save();
         cleanBackCtx.strokeStyle = '#1E1E1E';
-        cleanBackCtx.lineWidth = 4.5 * scaleX;
+        cleanBackCtx.lineWidth = 9;
         cleanBackCtx.beginPath();
-        drawRoundedRect(cleanBackCtx, 2.25 * scaleX, 2.25 * scaleY, 515.5 * scaleX, 107.5 * scaleY, 6 * scaleX);
+        drawRoundedRect(cleanBackCtx, 14.5, 14.5, 1031, 215, 12);
         cleanBackCtx.stroke();
         cleanBackCtx.restore();
 
@@ -1217,11 +1199,11 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
         const logoImg = logoImgRef.current;
 
-        let maxW = 120 * scaleX;
-        let maxH = 95 * scaleY;
+        let maxW = 240;
+        let maxH = 190;
         if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
-          maxW = 150 * scaleX;
-          maxH = 90 * scaleY;
+          maxW = 300;
+          maxH = 180;
         }
 
         let logoW = maxW;
@@ -1236,43 +1218,43 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
 
         if (hasLogo && hasText) {
-          cleanBackCtx.font = `700 ${Math.round(44 * scaleY)}px 'Oswald', 'Outfit', 'Inter', sans-serif`;
+          cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
           const textW = cleanBackCtx.measureText(config.backSideText).width;
-          const gap = 24 * scaleX;
+          const gap = 48;
           const totalW = logoW + gap + textW;
-          const startX = 260 * scaleX - totalW / 2;
+          const startX = 530 - totalW / 2;
 
           if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
             cleanBackCtx.save();
             if (config.backSideLogo !== 'bmw') {
               cleanBackCtx.filter = 'brightness(0)';
             }
-            cleanBackCtx.drawImage(logoImg, startX, 56 * scaleY - logoH / 2, logoW, logoH);
+            cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
             cleanBackCtx.restore();
           }
 
           cleanBackCtx.fillStyle = '#1E1E1E';
           cleanBackCtx.textAlign = 'left';
           cleanBackCtx.textBaseline = 'middle';
-          cleanBackCtx.fillText(config.backSideText, startX + logoW + gap, 58 * scaleY);
+          cleanBackCtx.fillText(config.backSideText, startX + logoW + gap, 126);
 
         } else if (hasLogo) {
-          const startX = 260 * scaleX - logoW / 2;
+          const startX = 530 - logoW / 2;
           if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
             cleanBackCtx.save();
             if (config.backSideLogo !== 'bmw') {
               cleanBackCtx.filter = 'brightness(0)';
             }
-            cleanBackCtx.drawImage(logoImg, startX, 56 * scaleY - logoH / 2, logoW, logoH);
+            cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
             cleanBackCtx.restore();
           }
 
         } else if (hasText) {
           cleanBackCtx.fillStyle = '#1E1E1E';
-          cleanBackCtx.font = `700 ${Math.round(44 * scaleY)}px 'Oswald', 'Outfit', 'Inter', sans-serif`;
+          cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
           cleanBackCtx.textAlign = 'center';
           cleanBackCtx.textBaseline = 'middle';
-          cleanBackCtx.fillText(config.backSideText, 260 * scaleX, 58 * scaleY);
+          cleanBackCtx.fillText(config.backSideText, 530, 126);
         }
 
         const imgDataBack = cleanBackCtx.getImageData(0, 0, sampleW, sampleH);
@@ -1343,6 +1325,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     setIsExporting('3mf');
     try {
       if (document.fonts) {
+        try {
+          await document.fonts.load("600 184px 'Euro Plate'");
+          await document.fonts.load("700 88px 'Oswald'");
+        } catch (e) {}
         await document.fonts.ready;
       }
 
