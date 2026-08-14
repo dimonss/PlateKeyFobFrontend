@@ -863,7 +863,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       setIsExporting(null);
     }
   };
-
   // Helper to construct a flat, 1:10 scale (52mm x 11.2mm x 3.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
   const buildPrintable3DGroup = (): THREE.Group => {
     const printableGroup = new THREE.Group();
@@ -872,7 +871,11 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const height = 11.2;   // 11.2 mm height (exact 1:10 scale of 112mm)
     const radius = 1.3;    // 1.3 mm corner radius
     const baseThickness = 3.0; // 3.0 mm base thickness
+    const holeX = 23.8;    // 23.8 mm hole center X
+    const holeY = 3.4;     // 3.4 mm hole center Y
+    const holeRadius = 1.1; // 1.1 mm hole radius (2.2 mm diameter through-hole)
 
+    // 1. Base Plate Solid Body with Keyring Hole
     const shape = new THREE.Shape();
     const x = -width / 2;
     const y = -height / 2;
@@ -887,18 +890,16 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     shape.lineTo(x, y + radius);
     shape.quadraticCurveTo(x, y, x + radius, y);
 
-    // Keyring hole at top-right (positioned symmetrically relative to top and right black frame lines)
+    // Keyring hole at top-right (through-hole with smooth 32 segments)
     const holePath = new THREE.Path();
-    holePath.absarc(23.8, 3.4, 1.05, 0, Math.PI * 2, true);
+    holePath.absarc(holeX, holeY, holeRadius, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
 
     const extrudeSettings = {
       depth: baseThickness,
-      bevelEnabled: true,
-      bevelSegments: 2,
+      bevelEnabled: false,
       steps: 1,
-      bevelSize: 0.2,
-      bevelThickness: 0.2,
+      curveSegments: 32,
     };
 
     let baseColorHex = 0xffffff;
@@ -914,127 +915,256 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     printableGroup.add(baseMesh);
 
     const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
-    const sampleW = 1060;
-    const sampleH = 244;
+    const sampleW = 530;
+    const sampleH = 122;
     const cellW = width / sampleW;
     const cellH = height / sampleH;
 
-    // 2. High-Definition FRONT 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
+    // Helper to generate 100% watertight, closed 2-manifold solid mesh with merged horizontal quads
+    const buildWatertightRelief = (
+      grid: number[][],
+      isBack: boolean,
+      cz1: number,
+      cz2Default: number
+    ) => {
+      for (const cIdx of [1, 2, 3]) {
+        const cz2 = (cIdx === 2 || cIdx === 3) && !isBack ? cz2Default - 0.15 : cz2Default;
+        const targetArr = positionsByColor[cIdx];
+
+        // 1. Top Face (+Z normal) and 2. Bottom Face (-Z normal) with Horizontal Run-Length Merging
+        for (let gy = 0; gy < sampleH; gy++) {
+          let gx = 0;
+          while (gx < sampleW) {
+            if (grid[gy][gx] === cIdx) {
+              const startGx = gx;
+              while (gx < sampleW && grid[gy][gx] === cIdx) {
+                gx++;
+              }
+              const endGx = gx;
+
+              const spanCy1 = height / 2 - (gy + 1) * cellH;
+              const spanCy2 = spanCy1 + cellH;
+
+              let spanCx1: number;
+              let spanCx2: number;
+
+              if (!isBack) {
+                spanCx1 = -width / 2 + startGx * cellW;
+                spanCx2 = -width / 2 + endGx * cellW;
+              } else {
+                // Mirrored for back view looking from -Z
+                spanCx1 = width / 2 - endGx * cellW;
+                spanCx2 = width / 2 - startGx * cellW;
+              }
+
+              // Top Face (+Z normal)
+              targetArr.push(
+                spanCx1, spanCy1, cz2,   spanCx2, spanCy1, cz2,   spanCx2, spanCy2, cz2,
+                spanCx1, spanCy1, cz2,   spanCx2, spanCy2, cz2,   spanCx1, spanCy2, cz2
+              );
+
+              // Bottom Face (-Z normal)
+              targetArr.push(
+                spanCx1, spanCy1, cz1,   spanCx2, spanCy2, cz1,   spanCx2, spanCy1, cz1,
+                spanCx1, spanCy1, cz1,   spanCx1, spanCy2, cz1,   spanCx2, spanCy2, cz1
+              );
+            } else {
+              gx++;
+            }
+          }
+        }
+
+        // 3. Side Walls (North, South, West, East) connecting cz1 to cz2
+        for (let gy = 0; gy < sampleH; gy++) {
+          for (let gx = 0; gx < sampleW; gx++) {
+            if (grid[gy][gx] !== cIdx) continue;
+
+            const cy1 = height / 2 - (gy + 1) * cellH;
+            const cy2 = cy1 + cellH;
+
+            let cx1: number;
+            let cx2: number;
+
+            if (!isBack) {
+              cx1 = -width / 2 + gx * cellW;
+              cx2 = cx1 + cellW;
+            } else {
+              cx1 = width / 2 - (gx + 1) * cellW;
+              cx2 = width / 2 - gx * cellW;
+            }
+
+            // North Wall (facing +Y)
+            if (gy === 0 || grid[gy - 1][gx] !== cIdx) {
+              targetArr.push(
+                cx1, cy2, cz1,   cx2, cy2, cz2,   cx2, cy2, cz1,
+                cx1, cy2, cz1,   cx1, cy2, cz2,   cx2, cy2, cz2
+              );
+            }
+
+            // South Wall (facing -Y)
+            if (gy === sampleH - 1 || grid[gy + 1][gx] !== cIdx) {
+              targetArr.push(
+                cx1, cy1, cz1,   cx2, cy1, cz1,   cx2, cy1, cz2,
+                cx1, cy1, cz1,   cx2, cy1, cz2,   cx1, cy1, cz2
+              );
+            }
+
+            if (!isBack) {
+              // West Wall (facing -X)
+              if (gx === 0 || grid[gy][gx - 1] !== cIdx) {
+                targetArr.push(
+                  cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
+                  cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
+                );
+              }
+
+              // East Wall (facing +X)
+              if (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx) {
+                targetArr.push(
+                  cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
+                  cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
+                );
+              }
+            } else {
+              // Inverted left/right for back side
+              // Left edge in back view (facing +X in world)
+              if (gx === 0 || grid[gy][gx - 1] !== cIdx) {
+                targetArr.push(
+                  cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
+                  cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
+                );
+              }
+
+              // Right edge in back view (facing -X in world)
+              if (gx === sampleW - 1 || grid[gy][gx + 1] !== cIdx) {
+                targetArr.push(
+                  cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
+                  cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
+                );
+              }
+            }
+          }
+        }
+      }
+    };
+
+    // 2. High-Definition FRONT 3D Relief Canvas
     const cleanCanvas = document.createElement('canvas');
     cleanCanvas.width = sampleW;
     cleanCanvas.height = sampleH;
     const cleanCtx = cleanCanvas.getContext('2d');
 
     if (cleanCtx) {
-      // Fill canvas background with pure white so no material textures or outer squares get extruded
+      const scaleX = sampleW / 520;
+      const scaleY = sampleH / 112;
+
       cleanCtx.fillStyle = '#FFFFFF';
       cleanCtx.fillRect(0, 0, sampleW, sampleH);
-
-      // Draw inner plate base white
-      cleanCtx.save();
-      cleanCtx.beginPath();
-      if (typeof cleanCtx.roundRect === 'function') {
-        cleanCtx.roundRect(10, 10, 1040, 224, 16);
-      } else {
-        cleanCtx.rect(10, 10, 1040, 224);
-      }
-      cleanCtx.fillStyle = '#FFFFFF';
-      cleanCtx.fill();
-      cleanCtx.restore();
 
       // Black frame line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 9;
+      cleanCtx.lineWidth = 4.5 * scaleX;
       cleanCtx.beginPath();
-      drawRoundedRect(cleanCtx, 14.5, 14.5, 1031, 215, 12);
+      drawRoundedRect(cleanCtx, 2.25 * scaleX, 2.25 * scaleY, 515.5 * scaleX, 107.5 * scaleY, 6 * scaleX);
       cleanCtx.stroke();
       cleanCtx.restore();
 
       // Vertical separator line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 9;
+      cleanCtx.lineWidth = 4.5 * scaleX;
       cleanCtx.beginPath();
-      cleanCtx.moveTo(290, 10);
-      cleanCtx.lineTo(290, 234);
+      cleanCtx.moveTo(140 * scaleX, 0);
+      cleanCtx.lineTo(140 * scaleX, 112 * scaleY);
       cleanCtx.stroke();
       cleanCtx.restore();
 
       // Region code
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+      cleanCtx.font = `600 ${Math.round(56 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
       cleanCtx.textAlign = 'center';
       cleanCtx.textBaseline = 'alphabetic';
-      cleanCtx.fillText(config.regionCode, 150, 124);
+      cleanCtx.fillText(config.regionCode || '01', 70 * scaleX, 57 * scaleY);
       cleanCtx.restore();
 
       // Flag of Kyrgyz Republic
-      const flagX = 66;
-      const flagY = 154;
-      const flagW = 80;
-      const flagH = 52;
+      const flagX = 28 * scaleX;
+      const flagY = 72 * scaleY;
+      const flagW = 40 * scaleX;
+      const flagH = 26 * scaleY;
       cleanCtx.save();
       cleanCtx.beginPath();
-      drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 3);
+      drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 1.5 * scaleX);
       cleanCtx.clip();
       cleanCtx.fillStyle = '#E11D48';
       cleanCtx.fillRect(flagX, flagY, flagW, flagH);
       // Yellow sun emblem circle
       cleanCtx.fillStyle = '#F59E0B';
       cleanCtx.beginPath();
-      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 14, 0, Math.PI * 2);
+      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 7 * scaleX, 0, Math.PI * 2);
       cleanCtx.fill();
       cleanCtx.restore();
 
       // "KG" text
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.font = "700 60px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
+      cleanCtx.font = `700 ${Math.round(30 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif`;
       cleanCtx.textAlign = 'left';
-      cleanCtx.fillText('KG', 162, 202);
+      cleanCtx.textBaseline = 'alphabetic';
+      cleanCtx.fillText('KG', 76 * scaleX, 96 * scaleY);
       cleanCtx.restore();
 
       // Main plate number
       cleanCtx.save();
       const parsed = parsePlateText(config.plateNumber);
       if (parsed.isStandard) {
-        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        cleanCtx.font = `600 ${Math.round(92 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         const digitsW = cleanCtx.measureText(parsed.digits).width;
-        cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        cleanCtx.font = `600 ${Math.round(76 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         const lettersW = parsed.letters ? cleanCtx.measureText(parsed.letters).width : 0;
-        const dx = 48;
+        const dx = 24 * scaleX;
         const totalW = digitsW + (parsed.letters ? dx + lettersW : 0);
-        const startX = 670 - totalW / 2;
+        const startX = 330 * scaleX - totalW / 2;
+
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+        cleanCtx.font = `600 ${Math.round(92 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'left';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.fillText(parsed.digits, startX, 194);
+        cleanCtx.fillText(parsed.digits, startX, 92 * scaleY);
+
         if (parsed.letters) {
-          cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
-          cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
+          cleanCtx.font = `600 ${Math.round(76 * scaleY)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+          cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 92 * scaleY);
         }
       } else {
         const textLen = parsed.digits.length;
-        const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
+        const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * scaleY;
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
+        cleanCtx.font = `600 ${Math.round(fontSize)}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'center';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.fillText(parsed.digits, 670, 192);
+        cleanCtx.fillText(parsed.digits, 330 * scaleX, 92 * scaleY);
       }
       cleanCtx.restore();
 
       const imgData = cleanCtx.getImageData(0, 0, sampleW, sampleH);
       const pixels = imgData.data;
 
-      // Build 2D color grid for 3D extrusion with side walls
+      // Build 2D color grid for 3D extrusion
       const grid: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
 
       for (let gy = 0; gy < sampleH; gy++) {
         for (let gx = 0; gx < sampleW; gx++) {
+          const cellCenterX = -width / 2 + (gx + 0.5) * cellW;
+          const cellCenterY = height / 2 - (gy + 0.5) * cellH;
+
+          // Always ensure keyring hole is 100% clear and unobstructed
+          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.25) {
+            continue;
+          }
+
           const idx = (gy * sampleW + gx) * 4;
           const r = pixels[idx];
           const g = pixels[idx + 1];
@@ -1048,258 +1178,140 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             colorIdx = 2; // Flag Red
           } else if (r > 170 && g > 130 && b < 100) {
             colorIdx = 3; // Flag Yellow
-          } else if (r < 120 && g < 120 && b < 120) {
+          } else if ((r * 0.299 + g * 0.587 + b * 0.114) < 160) {
             colorIdx = 1; // Black Text/Digits/Border
           }
           grid[gy][gx] = colorIdx;
         }
       }
 
-      for (let gy = 0; gy < sampleH; gy++) {
-        for (let gx = 0; gx < sampleW; gx++) {
-          const colorIdx = grid[gy][gx];
-          if (colorIdx === 0) continue;
-
-          const cx1 = -width / 2 + gx * cellW;
-          const cx2 = cx1 + cellW;
-          const cy1 = height / 2 - (gy + 1) * cellH;
-          const cy2 = cy1 + cellH;
-
-          // Only skip pixels inside the physical keyring hole cutout (23.8mm, 3.2mm, r=1.05mm)
-          const distHole = Math.hypot((cx1 + cx2) / 2 - 23.8, (cy1 + cy2) / 2 - 3.2);
-          if (distHole <= 1.0) continue;
-
-          // Protrusion height: 0.6 mm for crisp 3D printing
-          // Penetrate 0.5mm INTO base plate (from 2.5mm to 3.6mm) so slicer fuses them into 1 solid contiguous volume with 0 floating regions
-          const reliefH = (colorIdx === 2 || colorIdx === 3) ? 0.4 : 0.6;
-          const cz1 = baseThickness - 0.5; // 2.5 mm (Fuses 0.5mm deep inside base plate)
-          const cz2 = baseThickness + reliefH; // 3.6 mm (Top face level)
-          const bevel = 0.12; // 0.12 mm chamfer / bevel offset (фаска)
-
-          const targetArr = positionsByColor[colorIdx];
-
-          // 1. Top Face (z = cz2)
-          targetArr.push(
-            cx1, cy1, cz2,  cx2, cy1, cz2,  cx2, cy2, cz2,
-            cx1, cy1, cz2,  cx2, cy2, cz2,  cx1, cy2, cz2
-          );
-
-          // 2. Bottom Face (z = cz1, 0.5mm inside base plate for 100% manifold solid fusion)
-          targetArr.push(
-            cx1 - bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2 + bevel, cy1 - bevel, cz1,
-            cx1 - bevel, cy1 - bevel, cz1,   cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1
-          );
-
-          // 3. North Chamfer Wall (gy - 1)
-          if (gy === 0 || grid[gy - 1][gx] !== colorIdx) {
-            targetArr.push(
-              cx1 - bevel, cy2 + bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
-              cx1 - bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,                   cx1, cy2, cz2
-            );
-          }
-
-          // 4. South Chamfer Wall (gy + 1)
-          if (gy === sampleH - 1 || grid[gy + 1][gx] !== colorIdx) {
-            targetArr.push(
-              cx1 - bevel, cy1 - bevel, cz1,   cx2, cy1, cz2,                   cx2 + bevel, cy1 - bevel, cz1,
-              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy1, cz2,                   cx2, cy1, cz2
-            );
-          }
-
-          // 5. West Chamfer Wall (gx - 1)
-          if (gx === 0 || grid[gy][gx - 1] !== colorIdx) {
-            targetArr.push(
-              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy2, cz2,                   cx1 - bevel, cy2 + bevel, cz1,
-              cx1 - bevel, cy1 - bevel, cz1,   cx1, cy1, cz2,                   cx1, cy2, cz2
-            );
-          }
-
-          // 6. East Chamfer Wall (gx + 1)
-          if (gx === sampleW - 1 || grid[gy][gx + 1] !== colorIdx) {
-            targetArr.push(
-              cx2 + bevel, cy1 - bevel, cz1,   cx2 + bevel, cy2 + bevel, cz1,   cx2, cy2, cz2,
-              cx2 + bevel, cy1 - bevel, cz1,   cx2, cy2, cz2,                   cx2, cy1, cz2
-            );
-          }
-        }
-      }
+      // Front relief: Inlaid from 2.4mm to raised 3.6mm (0.6mm above base plate)
+      buildWatertightRelief(grid, false, baseThickness - 0.6, baseThickness + 0.6);
     }
 
-    // 3. High-Definition BACK 3D Relief Mesh (Clean White Background, 1060 x 244 Resolution)
-    const cleanBackCanvas = document.createElement('canvas');
-    cleanBackCanvas.width = sampleW;
-    cleanBackCanvas.height = sampleH;
-    const cleanBackCtx = cleanBackCanvas.getContext('2d');
+    // 3. High-Definition BACK 3D Relief Canvas
+    const hasBackContent = (config.backSideText && config.backSideText.trim()) || (config.backSideLogo && config.backSideLogo !== 'none');
+    if (hasBackContent) {
+      const cleanBackCanvas = document.createElement('canvas');
+      cleanBackCanvas.width = sampleW;
+      cleanBackCanvas.height = sampleH;
+      const cleanBackCtx = cleanBackCanvas.getContext('2d');
 
-    if (cleanBackCtx) {
-      cleanBackCtx.fillStyle = '#FFFFFF';
-      cleanBackCtx.fillRect(0, 0, sampleW, sampleH);
+      if (cleanBackCtx) {
+        const scaleX = sampleW / 520;
+        const scaleY = sampleH / 112;
 
-      // Black frame line
-      cleanBackCtx.save();
-      cleanBackCtx.strokeStyle = '#1E1E1E';
-      cleanBackCtx.lineWidth = 9;
-      cleanBackCtx.beginPath();
-      drawRoundedRect(cleanBackCtx, 14.5, 14.5, 1031, 215, 12);
-      cleanBackCtx.stroke();
-      cleanBackCtx.restore();
+        cleanBackCtx.fillStyle = '#FFFFFF';
+        cleanBackCtx.fillRect(0, 0, sampleW, sampleH);
 
-      const hasText = !!(config.backSideText && config.backSideText.trim());
-      const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
-      const logoImg = logoImgRef.current;
+        // Black frame line
+        cleanBackCtx.save();
+        cleanBackCtx.strokeStyle = '#1E1E1E';
+        cleanBackCtx.lineWidth = 4.5 * scaleX;
+        cleanBackCtx.beginPath();
+        drawRoundedRect(cleanBackCtx, 2.25 * scaleX, 2.25 * scaleY, 515.5 * scaleX, 107.5 * scaleY, 6 * scaleX);
+        cleanBackCtx.stroke();
+        cleanBackCtx.restore();
 
-      let maxW = 240;
-      let maxH = 190;
-      if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
-        maxW = 300;
-        maxH = 180;
-      }
+        const hasText = !!(config.backSideText && config.backSideText.trim());
+        const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
+        const logoImg = logoImgRef.current;
 
-      let logoW = maxW;
-      let logoH = maxH;
-      if (logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
-        const imgRatio = logoImg.naturalWidth / logoImg.naturalHeight;
-        if (maxW / maxH > imgRatio) {
-          logoW = maxH * imgRatio;
-        } else {
-          logoH = maxW / imgRatio;
-        }
-      }
-
-      if (hasLogo && hasText) {
-        cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
-        const textW = cleanBackCtx.measureText(config.backSideText).width;
-        const gap = 48;
-        const totalW = logoW + gap + textW;
-        const startX = 530 - totalW / 2;
-
-        if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-          cleanBackCtx.save();
-          if (config.backSideLogo !== 'bmw') {
-            cleanBackCtx.filter = 'brightness(0)';
-          }
-          cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
-          cleanBackCtx.restore();
+        let maxW = 120 * scaleX;
+        let maxH = 95 * scaleY;
+        if (['toyota', 'lexus', 'hyundai', 'kia', 'audi', 'chevrolet'].includes(config.backSideLogo)) {
+          maxW = 150 * scaleX;
+          maxH = 90 * scaleY;
         }
 
-        cleanBackCtx.fillStyle = '#1E1E1E';
-        cleanBackCtx.textAlign = 'left';
-        cleanBackCtx.textBaseline = 'middle';
-        cleanBackCtx.fillText(config.backSideText, startX + logoW + gap, 126);
-
-      } else if (hasLogo) {
-        const startX = 530 - logoW / 2;
-        if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-          cleanBackCtx.save();
-          if (config.backSideLogo !== 'bmw') {
-            cleanBackCtx.filter = 'brightness(0)';
-          }
-          cleanBackCtx.drawImage(logoImg, startX, 122 - logoH / 2, logoW, logoH);
-          cleanBackCtx.restore();
-        }
-
-      } else if (hasText) {
-        cleanBackCtx.fillStyle = '#1E1E1E';
-        cleanBackCtx.font = "700 88px 'Oswald', 'Outfit', 'Inter', sans-serif";
-        cleanBackCtx.textAlign = 'center';
-        cleanBackCtx.textBaseline = 'middle';
-        cleanBackCtx.fillText(config.backSideText, 530, 126);
-      }
-
-      const imgDataBack = cleanBackCtx.getImageData(0, 0, sampleW, sampleH);
-      const pixelsBack = imgDataBack.data;
-
-      const gridBack: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
-
-      for (let gy = 0; gy < sampleH; gy++) {
-        for (let gx = 0; gx < sampleW; gx++) {
-          const idx = (gy * sampleW + gx) * 4;
-          const r = pixelsBack[idx];
-          const g = pixelsBack[idx + 1];
-          const b = pixelsBack[idx + 2];
-          const a = pixelsBack[idx + 3];
-
-          if (a < 128) continue;
-
-          let colorIdx = 0;
-          if (r > 140 && g < 100 && b < 120) {
-            colorIdx = 2; // Red (if logo has red)
-          } else if (r > 170 && g > 130 && b < 100) {
-            colorIdx = 3; // Yellow (if logo has yellow/gold)
-          } else if (r < 180 && g < 180 && b < 180) {
-            colorIdx = 1; // Black Text/Logo/Border
-          }
-          gridBack[gy][gx] = colorIdx;
-        }
-      }
-
-      for (let gy = 0; gy < sampleH; gy++) {
-        for (let gx = 0; gx < sampleW; gx++) {
-          const colorIdx = gridBack[gy][gx];
-          if (colorIdx === 0) continue;
-
-          const cx_canvas1 = -width / 2 + gx * cellW;
-          const cx_canvas2 = cx_canvas1 + cellW;
-          const cy1 = height / 2 - (gy + 1) * cellH;
-          const cy2 = cy1 + cellH;
-
-          // Mirrored X for back side view looking from -Z
-          const cx1 = -cx_canvas2;
-          const cx2 = -cx_canvas1;
-
-          // Skip physical keyring hole
-          const distHole = Math.hypot((cx1 + cx2) / 2 - 23.8, (cy1 + cy2) / 2 - 3.2);
-          if (distHole <= 1.0) continue;
-
-          const cz1 = 0.0; // Exactly flush with back surface (z = 0.0mm)
-          const cz2 = 0.6; // Inlaid 0.6mm deep inside base plate (z = 0.6mm)
-
-          const targetArr = positionsByColor[colorIdx];
-
-          // 1. Flush Outer Back Face (z = 0.0mm, facing -Z)
-          targetArr.push(
-            cx2, cy1, cz1,   cx1, cy1, cz1,   cx1, cy2, cz1,
-            cx2, cy1, cz1,   cx1, cy2, cz1,   cx2, cy2, cz1
-          );
-
-          // 2. Inlaid Top Face inside base (z = 0.6mm, facing +Z)
-          targetArr.push(
-            cx1, cy1, cz2,   cx2, cy1, cz2,   cx2, cy2, cz2,
-            cx1, cy1, cz2,   cx2, cy2, cz2,   cx1, cy2, cz2
-          );
-
-          // 3. North Wall (gy - 1, top edge cy2, facing +Y)
-          if (gy === 0 || gridBack[gy - 1][gx] !== colorIdx) {
-            targetArr.push(
-              cx1, cy2, cz1,   cx2, cy2, cz2,   cx2, cy2, cz1,
-              cx1, cy2, cz1,   cx1, cy2, cz2,   cx2, cy2, cz2
-            );
-          }
-
-          // 4. South Wall (gy + 1, bottom edge cy1, facing -Y)
-          if (gy === sampleH - 1 || gridBack[gy + 1][gx] !== colorIdx) {
-            targetArr.push(
-              cx1, cy1, cz1,   cx2, cy1, cz1,   cx2, cy1, cz2,
-              cx1, cy1, cz1,   cx2, cy1, cz2,   cx1, cy1, cz2
-            );
-          }
-
-          // 5. West Wall (gx - 1, left edge of canvas -> cx2 in world, facing +X)
-          if (gx === 0 || gridBack[gy][gx - 1] !== colorIdx) {
-            targetArr.push(
-              cx2, cy1, cz1,   cx2, cy2, cz2,   cx2, cy1, cz2,
-              cx2, cy1, cz1,   cx2, cy2, cz1,   cx2, cy2, cz2
-            );
-          }
-
-          // 6. East Wall (gx + 1, right edge of canvas -> cx1 in world, facing -X)
-          if (gx === sampleW - 1 || gridBack[gy][gx + 1] !== colorIdx) {
-            targetArr.push(
-              cx1, cy1, cz1,   cx1, cy1, cz2,   cx1, cy2, cz2,
-              cx1, cy1, cz1,   cx1, cy2, cz2,   cx1, cy2, cz1
-            );
+        let logoW = maxW;
+        let logoH = maxH;
+        if (logoImg && logoImg.complete && logoImg.naturalWidth > 0 && logoImg.naturalHeight > 0) {
+          const imgRatio = logoImg.naturalWidth / logoImg.naturalHeight;
+          if (maxW / maxH > imgRatio) {
+            logoW = maxH * imgRatio;
+          } else {
+            logoH = maxW / imgRatio;
           }
         }
+
+        if (hasLogo && hasText) {
+          cleanBackCtx.font = `700 ${Math.round(44 * scaleY)}px 'Oswald', 'Outfit', 'Inter', sans-serif`;
+          const textW = cleanBackCtx.measureText(config.backSideText).width;
+          const gap = 24 * scaleX;
+          const totalW = logoW + gap + textW;
+          const startX = 260 * scaleX - totalW / 2;
+
+          if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+            cleanBackCtx.save();
+            if (config.backSideLogo !== 'bmw') {
+              cleanBackCtx.filter = 'brightness(0)';
+            }
+            cleanBackCtx.drawImage(logoImg, startX, 56 * scaleY - logoH / 2, logoW, logoH);
+            cleanBackCtx.restore();
+          }
+
+          cleanBackCtx.fillStyle = '#1E1E1E';
+          cleanBackCtx.textAlign = 'left';
+          cleanBackCtx.textBaseline = 'middle';
+          cleanBackCtx.fillText(config.backSideText, startX + logoW + gap, 58 * scaleY);
+
+        } else if (hasLogo) {
+          const startX = 260 * scaleX - logoW / 2;
+          if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+            cleanBackCtx.save();
+            if (config.backSideLogo !== 'bmw') {
+              cleanBackCtx.filter = 'brightness(0)';
+            }
+            cleanBackCtx.drawImage(logoImg, startX, 56 * scaleY - logoH / 2, logoW, logoH);
+            cleanBackCtx.restore();
+          }
+
+        } else if (hasText) {
+          cleanBackCtx.fillStyle = '#1E1E1E';
+          cleanBackCtx.font = `700 ${Math.round(44 * scaleY)}px 'Oswald', 'Outfit', 'Inter', sans-serif`;
+          cleanBackCtx.textAlign = 'center';
+          cleanBackCtx.textBaseline = 'middle';
+          cleanBackCtx.fillText(config.backSideText, 260 * scaleX, 58 * scaleY);
+        }
+
+        const imgDataBack = cleanBackCtx.getImageData(0, 0, sampleW, sampleH);
+        const pixelsBack = imgDataBack.data;
+
+        const gridBack: number[][] = Array.from({ length: sampleH }, () => new Array(sampleW).fill(0));
+
+        for (let gy = 0; gy < sampleH; gy++) {
+          for (let gx = 0; gx < sampleW; gx++) {
+            // Check hole in back world coordinates
+            const cellWorldX = width / 2 - (gx + 0.5) * cellW;
+            const cellWorldY = height / 2 - (gy + 0.5) * cellH;
+
+            if (Math.hypot(cellWorldX - holeX, cellWorldY - holeY) <= holeRadius + 0.25) {
+              continue;
+            }
+
+            const idx = (gy * sampleW + gx) * 4;
+            const r = pixelsBack[idx];
+            const g = pixelsBack[idx + 1];
+            const b = pixelsBack[idx + 2];
+            const a = pixelsBack[idx + 3];
+
+            if (a < 128) continue;
+
+            let colorIdx = 0;
+            if (r > 140 && g < 100 && b < 120) {
+              colorIdx = 2; // Red
+            } else if (r > 170 && g > 130 && b < 100) {
+              colorIdx = 3; // Yellow
+            } else if ((r * 0.299 + g * 0.587 + b * 0.114) < 160) {
+              colorIdx = 1; // Black
+            }
+            gridBack[gy][gx] = colorIdx;
+          }
+        }
+
+        // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.6mm into base plate
+        buildWatertightRelief(gridBack, true, 0.0, 0.6);
       }
     }
 
@@ -1330,6 +1342,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
   const handleExport3MF = async () => {
     setIsExporting('3mf');
     try {
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+
       const hasLogo = config.backSideLogo && config.backSideLogo !== 'none';
       if (hasLogo && (!logoImgRef.current || !logoImgRef.current.complete || logoImgRef.current.naturalWidth === 0)) {
         const img = new Image();
@@ -1364,8 +1380,10 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const indexAttr = geometry.index;
 
           let colorIndex = 0;
+          let partName = 'BasePlate';
           if (mesh.name.startsWith('Relief_Color_')) {
             colorIndex = parseInt(mesh.name.replace('Relief_Color_', ''), 10);
+            partName = colorIndex === 1 ? 'Relief_Black' : colorIndex === 2 ? 'Relief_Red' : 'Relief_Yellow';
           }
 
           if (posAttr && posAttr.count > 0) {
@@ -1395,7 +1413,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
               }
             }
 
-            objectsXml += `    <object id="${currentObjId}" type="model">
+            objectsXml += `    <object id="${currentObjId}" type="model" name="${partName}" pid="1" pindex="${colorIndex}">
       <mesh>
         <vertices>
 ${partVerticesXml}        </vertices>
@@ -1456,9 +1474,12 @@ ${objectsXml}  </resources>
   };
 
   // Export 3D STL format (3D Printing / CNC)
-  const handleExportSTL = () => {
+  const handleExportSTL = async () => {
     setIsExporting('stl');
     try {
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
       const printableGroup = buildPrintable3DGroup();
       printableGroup.updateMatrixWorld(true);
 
