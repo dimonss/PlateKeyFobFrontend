@@ -862,17 +862,17 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     } finally {
       setIsExporting(null);
     }
-  };  // Helper to construct a flat, 1:10 scale (52mm x 11.2mm x 3.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
+  };  // Helper to construct a flat, 1:7 scale (74.3mm x 16.0mm x 2.6mm) 3D printable solid mesh with real 3D raised text, borders & multi-color flag
   const buildPrintable3DGroup = (): THREE.Group => {
     const printableGroup = new THREE.Group();
 
-    const width = 52.0;    // 52.0 mm length (exact 1:10 scale of 520mm)
-    const height = 11.2;   // 11.2 mm height (exact 1:10 scale of 112mm)
-    const radius = 1.3;    // 1.3 mm corner radius
-    const baseThickness = 3.0; // 3.0 mm base thickness
-    const holeX = 23.8;    // 23.8 mm hole center X
-    const holeY = 3.4;     // 3.4 mm hole center Y
-    const holeRadius = 1.15; // 1.15 mm hole radius (2.3 mm diameter through-hole)
+    const width = 74.3;    // 74.3 mm length (exact 1:7 scale of 520mm real plate)
+    const height = 16.0;   // 16.0 mm height (exact 1:7 scale of 112mm real plate)
+    const radius = 1.85;   // 1.85 mm corner radius
+    const baseThickness = 2.0; // 2.0 mm base thickness (10 layers at 0.2mm)
+    const holeX = 32.35;   // 32.35 mm hole center X (4.8mm from right edge: 74.3 / 2 - 4.8)
+    const holeY = 3.2;     // 3.2 mm hole center Y (4.8mm from top edge: 16.0 / 2 - 4.8)
+    const holeRadius = 1.75; // 1.75 mm hole radius (3.5 mm diameter standard keyring through-hole)
 
     // 1. Base Plate Solid Body with Keyring Hole
     const shape = new THREE.Shape();
@@ -1170,8 +1170,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
       }
 
-      // Front relief: Inlaid from 2.4mm to raised 3.6mm (0.6mm above base plate)
-      buildWatertightRelief(grid, false, baseThickness - 0.6, baseThickness + 0.6);
+      // Front relief: Flush with top of base plate (z = 2.0mm) and raised to 2.6mm (+0.6mm above base plate)
+      buildWatertightRelief(grid, false, baseThickness, baseThickness + 0.6);
     }
 
     // 3. High-Definition BACK 3D Relief Canvas (1060 x 244)
@@ -1292,8 +1292,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           }
         }
 
-        // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.6mm into base plate
-        buildWatertightRelief(gridBack, true, 0.0, 0.6);
+        // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.4mm into base plate
+        buildWatertightRelief(gridBack, true, 0.0, 0.4);
       }
     }
 
@@ -1320,8 +1320,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     return printableGroup;
   };
 
-  // Export 3D 3MF format (Native BambuStudio / PrusaSlicer format for Bambu Lab P2S)
-  // All meshes merged into a single <mesh> with per-face colors for maximum slicer compatibility
+  // Export 3D 3MF format (Native BambuStudio / PrusaSlicer Multi-part Assembly format for Bambu Lab P2S)
+  // Exported as a multi-part assembly with separate components for Base, Text/Borders, Flag Red, Flag Yellow
   const handleExport3MF = async () => {
     setIsExporting('3mf');
     try {
@@ -1354,52 +1354,77 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       else if (config.material === 'carbon') baseColorHex = '#27272A';
       else if (config.material === 'plastic') baseColorHex = '#CBD5E1';
 
-      // Merge all meshes into a single unified mesh with per-face color indices
-      let allVerticesXml = '';
-      let allTrianglesXml = '';
-      let globalVertexOffset = 0;
+      interface ModelPart {
+        name: string;
+        colorIndex: number;
+        mesh: THREE.Mesh;
+      }
+
+      const parts: ModelPart[] = [];
 
       printableGroup.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
-          const geometry = mesh.geometry.clone();
-          geometry.applyMatrix4(mesh.matrixWorld);
-
-          const posAttr = geometry.attributes.position;
-          const indexAttr = geometry.index;
-
-          let colorIndex = 0;
-          if (mesh.name.startsWith('Relief_Color_')) {
-            colorIndex = parseInt(mesh.name.replace('Relief_Color_', ''), 10);
-          }
-
-          if (posAttr && posAttr.count > 0) {
-            // Append vertices with global offset tracking
-            for (let i = 0; i < posAttr.count; i++) {
-              const x = posAttr.getX(i);
-              const y = posAttr.getY(i);
-              const z = posAttr.getZ(i);
-              allVerticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
-            }
-
-            // Append triangles with offset vertex indices and per-face color
-            if (indexAttr) {
-              for (let i = 0; i < indexAttr.count; i += 3) {
-                const v1 = indexAttr.getX(i) + globalVertexOffset;
-                const v2 = indexAttr.getX(i + 1) + globalVertexOffset;
-                const v3 = indexAttr.getX(i + 2) + globalVertexOffset;
-                allTrianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" pid="1" p1="${colorIndex}" />\n`;
-              }
-            } else {
-              for (let i = 0; i < posAttr.count; i += 3) {
-                allTrianglesXml += `        <triangle v1="${i + globalVertexOffset}" v2="${i + 1 + globalVertexOffset}" v3="${i + 2 + globalVertexOffset}" pid="1" p1="${colorIndex}" />\n`;
-              }
-            }
-
-            globalVertexOffset += posAttr.count;
+          if (mesh.name === 'BasePlate_Color_0') {
+            parts.push({ name: 'Base_Plate', colorIndex: 0, mesh });
+          } else if (mesh.name === 'Relief_Color_1') {
+            parts.push({ name: 'Text_and_Border', colorIndex: 1, mesh });
+          } else if (mesh.name === 'Relief_Color_2') {
+            parts.push({ name: 'Flag_Red', colorIndex: 2, mesh });
+          } else if (mesh.name === 'Relief_Color_3') {
+            parts.push({ name: 'Flag_Yellow', colorIndex: 3, mesh });
           }
         }
       });
+
+      let objectsXml = '';
+      let componentsXml = '';
+      let nextObjectId = 2;
+
+      for (const part of parts) {
+        const objectId = nextObjectId++;
+        const geometry = part.mesh.geometry.clone();
+        geometry.applyMatrix4(part.mesh.matrixWorld);
+
+        const posAttr = geometry.attributes.position;
+        const indexAttr = geometry.index;
+
+        if (!posAttr || posAttr.count === 0) continue;
+
+        let verticesXml = '';
+        for (let i = 0; i < posAttr.count; i++) {
+          const x = posAttr.getX(i);
+          const y = posAttr.getY(i);
+          const z = posAttr.getZ(i);
+          verticesXml += `        <vertex x="${x.toFixed(4)}" y="${y.toFixed(4)}" z="${z.toFixed(4)}" />\n`;
+        }
+
+        let trianglesXml = '';
+        if (indexAttr) {
+          for (let i = 0; i < indexAttr.count; i += 3) {
+            const v1 = indexAttr.getX(i);
+            const v2 = indexAttr.getX(i + 1);
+            const v3 = indexAttr.getX(i + 2);
+            trianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" pid="1" p1="${part.colorIndex}" />\n`;
+          }
+        } else {
+          for (let i = 0; i < posAttr.count; i += 3) {
+            trianglesXml += `        <triangle v1="${i}" v2="${i + 1}" v3="${i + 2}" pid="1" p1="${part.colorIndex}" />\n`;
+          }
+        }
+
+        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}" pid="1" pindex="${part.colorIndex}">
+      <metadata name="extruder">${part.colorIndex + 1}</metadata>
+      <mesh>
+        <vertices>
+${verticesXml}        </vertices>
+        <triangles>
+${trianglesXml}        </triangles>
+      </mesh>
+    </object>\n`;
+
+        componentsXml += `      <component objectid="${objectId}" />\n`;
+      }
 
       const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US"
@@ -1417,13 +1442,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       <m:color color="#E11D48FF" />
       <m:color color="#F59E0BFF" />
     </m:colorgroup>
-    <object id="1" type="model" pid="1" pindex="0">
-      <mesh>
-        <vertices>
-${allVerticesXml}        </vertices>
-        <triangles>
-${allTrianglesXml}        </triangles>
-      </mesh>
+${objectsXml}    <object id="1" type="model" name="${getBaseFileName()}">
+      <components>
+${componentsXml}      </components>
     </object>
   </resources>
   <build>
@@ -1613,11 +1634,12 @@ ${allTrianglesXml}        </triangles>
                 <Info size={14} color="#10b981" /> Рекомендуемые настройки в BambuStudio для P2S:
               </div>
               <ul style={{ margin: 0, paddingLeft: '18px' }}>
-                <li><strong>Размер модели:</strong> 52.0 × 11.2 × 3.6 мм (точный 1:10 масштаб реального гос номера)</li>
-                <li><strong>Принтер:</strong> Bambu Lab P2S | <strong>Сопло:</strong> 0.4 мм (или 0.2 мм для сверхчеткого текста)</li>
-                <li><strong>Высота слоя (Layer height):</strong> 0.12 мм — 0.16 мм High Detail</li>
+                <li><strong>Размер модели:</strong> 74.3 × 16.0 × 2.6 мм (оптимальный масштаб 1:7 для сопла 0.4 мм)</li>
+                <li><strong>Принтер:</strong> Bambu Lab P2S / X1C / P1S / A1 | <strong>Сопло:</strong> 0.4 мм (или 0.2 мм)</li>
+                <li><strong>Высота слоя (Layer height):</strong> 0.16 мм или 0.20 мм (рельеф +0.6 мм)</li>
+                <li><strong>Генератор линий:</strong> Arachne (рекомендуется для идеальной четкости мелкого шрифта)</li>
                 <li><strong>Заполнение (Infill):</strong> 20% Gyroid | <strong>Стенки (Wall loops):</strong> 3-4</li>
-                <li><strong>AMS / Двухцветная печать:</strong> Назначьте цвет шрифта/рамок или добавьте паузу на высоте Z = 1.0 мм</li>
+                <li><strong>AMS / Многоцветная печать:</strong> Автоматическая сборка деталей (Base, Text, Flag Red, Flag Yellow). Пауза для смены цвета без AMS на высоте Z = 2.0 мм</li>
               </ul>
             </div>
           </div>
