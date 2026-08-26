@@ -932,7 +932,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cz2Default: number
     ) => {
       for (const cIdx of [1, 2, 3]) {
-        const cz2 = cz2Default;
+        // Recess the yellow sun circle on the front by 0.24mm for clear physical step in slicer
+        const cz2 = !isBack && cIdx === 3 ? cz2Default - 0.24 : cz2Default;
         const targetArr = positionsByColor[cIdx];
 
         // 1. Top Face (+Z normal) and 2. Bottom Face (-Z normal) with Horizontal Run-Length Merging
