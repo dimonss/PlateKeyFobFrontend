@@ -870,7 +870,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const height = 16.0;   // 16.0 mm height (exact 1:7 scale of 112mm real plate)
     const radius = 1.85;   // 1.85 mm corner radius
     const baseThickness = 2.0; // 2.0 mm base thickness (10 layers at 0.2mm)
-    const holeX = 34.0;    // 34.0 mm hole center X (moved to edge, right against black border)
+    const holeX = 33.6;    // 34.0 mm hole center X (moved to edge, right against black border)
     const holeY = 4.8;     // 5.0 mm hole center Y (moved to edge, right against black border)
     const holeRadius = 1.7; // 1.7 mm hole radius (3.4 mm diameter through-hole)
 
