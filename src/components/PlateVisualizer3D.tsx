@@ -935,8 +935,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cz2Default: number
     ) => {
       for (const cIdx of [1, 2, 3]) {
-        // Recess the yellow sun circle on the front by 0.24mm for clear physical step in slicer
-        const cz2 = !isBack && cIdx === 3 ? cz2Default - 0.24 : cz2Default;
+        // Front relief: keep all colors coplanar
+        const cz2 = cz2Default;
         const targetArr = positionsByColor[cIdx];
 
         // 1. Top Face (+Z normal) and 2. Bottom Face (-Z normal) with Horizontal Run-Length Merging
@@ -963,6 +963,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
                 // Mirrored for back view looking from -Z
                 spanCx1 = width / 2 - endGx * cellW;
                 spanCx2 = width / 2 - startGx * cellW;
+              }
+
+              // Strictly ensure no relief geometry enters into keyring hole cylinder
+              const d1 = Math.hypot(spanCx1 - holeX, spanCy1 - holeY);
+              const d2 = Math.hypot(spanCx2 - holeX, spanCy1 - holeY);
+              const d3 = Math.hypot(spanCx1 - holeX, spanCy2 - holeY);
+              const d4 = Math.hypot(spanCx2 - holeX, spanCy2 - holeY);
+              if (Math.min(d1, d2, d3, d4) <= holeRadius + 0.35) {
+                continue;
               }
 
               // Top Face (+Z normal)
@@ -999,6 +1008,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             } else {
               cx1 = width / 2 - (gx + 1) * cellW;
               cx2 = width / 2 - gx * cellW;
+            }
+
+            const d1 = Math.hypot(cx1 - holeX, cy1 - holeY);
+            const d2 = Math.hypot(cx2 - holeX, cy1 - holeY);
+            const d3 = Math.hypot(cx1 - holeX, cy2 - holeY);
+            const d4 = Math.hypot(cx2 - holeX, cy2 - holeY);
+            if (Math.min(d1, d2, d3, d4) <= holeRadius + 0.35) {
+              continue;
             }
 
             // North Wall (facing +Y normal)
@@ -1064,6 +1081,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.stroke();
       cleanCtx.restore();
 
+      // Clear out keyring hole area completely (r = 32px = ~2.25mm radius, > 1.7mm physical hole)
+      cleanCtx.save();
+      cleanCtx.globalCompositeOperation = 'destination-out';
+      cleanCtx.beginPath();
+      cleanCtx.arc(1012, 49, 32, 0, Math.PI * 2);
+      cleanCtx.fill();
+      cleanCtx.restore();
+
       // Vertical separator line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
@@ -1074,12 +1099,16 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.stroke();
       cleanCtx.restore();
 
-      // Region code
+      // Region code (bold stroke + fill to prevent slicer voids)
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
+      cleanCtx.strokeStyle = '#1E1E1E';
+      cleanCtx.lineWidth = 4;
+      cleanCtx.lineJoin = 'round';
       cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
       cleanCtx.textAlign = 'center';
       cleanCtx.textBaseline = 'alphabetic';
+      cleanCtx.strokeText(config.regionCode || '01', 150, 124);
       cleanCtx.fillText(config.regionCode || '01', 150, 124);
       cleanCtx.restore();
 
@@ -1133,22 +1162,31 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         const startX = 670 - totalW / 2;
 
         cleanCtx.fillStyle = '#1E1E1E';
+        cleanCtx.strokeStyle = '#1E1E1E';
+        cleanCtx.lineWidth = 5;
+        cleanCtx.lineJoin = 'round';
         cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         cleanCtx.textAlign = 'left';
         cleanCtx.textBaseline = 'alphabetic';
+        cleanCtx.strokeText(parsed.digits, startX, 194);
         cleanCtx.fillText(parsed.digits, startX, 194);
 
         if (parsed.letters) {
           cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
+          cleanCtx.strokeText(parsed.letters, startX + digitsW + dx, 194);
           cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
         }
       } else {
         const textLen = parsed.digits.length;
         const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
         cleanCtx.fillStyle = '#1E1E1E';
+        cleanCtx.strokeStyle = '#1E1E1E';
+        cleanCtx.lineWidth = 5;
+        cleanCtx.lineJoin = 'round';
         cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'center';
         cleanCtx.textBaseline = 'alphabetic';
+        cleanCtx.strokeText(parsed.digits, 670, 192);
         cleanCtx.fillText(parsed.digits, 670, 192);
       }
       cleanCtx.restore();
@@ -1165,7 +1203,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const cellCenterY = height / 2 - (gy + 0.5) * cellH;
 
           // Always ensure keyring hole is 100% clear and unobstructed
-          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.25) {
+          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.6) {
             continue;
           }
 
@@ -1189,8 +1227,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
       }
 
-      // Front relief: Flush with top of base plate (z = 2.0mm) and raised to 2.6mm (+0.6mm above base plate)
-      buildWatertightRelief(grid, false, baseThickness, baseThickness + 0.6);
+      // Front relief: Flush with top of base plate (z = 2.0mm) and raised to 2.3mm (+0.3mm above base plate, halved from 0.6mm!)
+      buildWatertightRelief(grid, false, baseThickness, baseThickness + 0.3);
     }
 
     // 3. High-Definition BACK 3D Relief Canvas (1060 x 244)
@@ -1212,6 +1250,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         cleanBackCtx.beginPath();
         drawRoundedRect(cleanBackCtx, 14.5, 14.5, 1031, 215, 12);
         cleanBackCtx.stroke();
+        cleanBackCtx.restore();
+
+        // Clear out keyring hole area completely on back side (r = 32px = ~2.25mm radius, > 1.7mm physical hole)
+        cleanBackCtx.save();
+        cleanBackCtx.globalCompositeOperation = 'destination-out';
+        cleanBackCtx.beginPath();
+        cleanBackCtx.arc(48, 49, 32, 0, Math.PI * 2);
+        cleanBackCtx.fill();
         cleanBackCtx.restore();
 
         const hasText = !!(config.backSideText && config.backSideText.trim());
@@ -1287,7 +1333,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             const cellWorldX = width / 2 - (gx + 0.5) * cellW;
             const cellWorldY = height / 2 - (gy + 0.5) * cellH;
 
-            if (Math.hypot(cellWorldX - holeX, cellWorldY - holeY) <= holeRadius + 0.25) {
+            if (Math.hypot(cellWorldX - holeX, cellWorldY - holeY) <= holeRadius + 0.6) {
               continue;
             }
 
@@ -1497,6 +1543,9 @@ ${modelSettingsPartsXml}  </object>
         print_settings_id: '0.20mm Standard @BBL P1S',
         wall_generator: 'arachne',
         detect_thin_wall: '1',
+        filter_out_gap_fill: '0',
+        gap_infill_speed: '30',
+        top_surface_pattern: 'monotonicline',
         filament_settings_id: [
           'Generic PETG',
           'Generic PETG',
