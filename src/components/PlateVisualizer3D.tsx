@@ -231,9 +231,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     ctx.shadowOffsetY = 1.2;
     ctx.shadowBlur = 0.8;
     ctx.fillStyle = '#1E1E1E';
-    ctx.font = "700 60px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
+    ctx.strokeStyle = '#1E1E1E';
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = 'round';
+    ctx.font = "900 62px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
     ctx.textAlign = 'left';
-    ctx.fillText('KG', 162, 202);
+    ctx.textBaseline = 'alphabetic';
+    ctx.strokeText('KG', 160, 202);
+    ctx.fillText('KG', 160, 202);
     ctx.restore();
     
     // Right plate text
@@ -1095,10 +1100,14 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       // "KG" text
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.font = "700 60px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
+      cleanCtx.strokeStyle = '#1E1E1E';
+      cleanCtx.lineWidth = 3.5;
+      cleanCtx.lineJoin = 'round';
+      cleanCtx.font = "900 62px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif";
       cleanCtx.textAlign = 'left';
       cleanCtx.textBaseline = 'alphabetic';
-      cleanCtx.fillText('KG', 162, 202);
+      cleanCtx.strokeText('KG', 160, 202);
+      cleanCtx.fillText('KG', 160, 202);
       cleanCtx.restore();
 
       // Main plate number
@@ -1328,6 +1337,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       if (document.fonts) {
         try {
           await document.fonts.load("600 184px 'Euro Plate'");
+          await document.fonts.load("800 80px 'Euro Plate'");
           await document.fonts.load("700 88px 'Oswald'");
         } catch (e) {}
         await document.fonts.ready;

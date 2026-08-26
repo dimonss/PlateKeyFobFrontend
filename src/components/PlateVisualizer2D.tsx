@@ -154,14 +154,18 @@ export const SVGPlate2D: React.FC<{ config: PlateConfig }> = ({ config }) => {
         <rect width="40" height="26" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" rx="1.5" />
       </g>
 
-      {/* "KG" Country Identifier (height ~26mm, baseline y=96mm, centered under right digit '1' at x=76) */}
+      {/* "KG" Country Identifier (authentic proportions with bold stroke for 0.4mm nozzle readiness) */}
       <text
         x="76"
         y="96"
-        fontSize="30"
+        fontSize="31"
         fontFamily="'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Outfit', sans-serif"
-        fontWeight="700"
+        fontWeight="900"
         fill="#1E1E1E"
+        stroke="#1E1E1E"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        paintOrder="stroke fill"
         letterSpacing="0.5"
         filter="url(#embossFilter)"
       >
