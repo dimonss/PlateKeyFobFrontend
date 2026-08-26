@@ -1396,6 +1396,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
       let objectsXml = '';
       let componentsXml = '';
+      let modelSettingsPartsXml = '';
       let nextObjectId = 2;
 
       for (const part of parts) {
@@ -1441,6 +1442,10 @@ ${trianglesXml}        </triangles>
     </object>\n`;
 
         componentsXml += `      <component objectid="${objectId}" />\n`;
+        modelSettingsPartsXml += `    <part id="${objectId}" subtype="normal_part">
+      <metadata key="name" value="${part.name}"/>
+      <metadata key="extruder" value="${part.colorIndex + 1}"/>
+    </part>\n`;
       }
 
       const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1469,6 +1474,57 @@ ${componentsXml}      </components>
   </build>
 </model>`;
 
+      const modelSettingsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <object id="1">
+    <metadata key="name" value="${getBaseFileName()}"/>
+${modelSettingsPartsXml}  </object>
+  <plate>
+    <metadata key="plater_id" value="1"/>
+    <metadata key="plater_name" value=""/>
+    <metadata key="locked" value="false"/>
+    <model_instance>
+      <metadata key="object_id" value="1"/>
+      <metadata key="instance_id" value="0"/>
+      <metadata key="identify_id" value="1"/>
+    </model_instance>
+  </plate>
+</config>`;
+
+      const projectSettingsJson = JSON.stringify({
+        printer_model: 'Bambu Lab P1S',
+        printer_settings_id: 'Bambu Lab P1S 0.4 nozzle',
+        print_settings_id: '0.20mm Standard @BBL P1S',
+        filament_settings_id: [
+          'Generic PETG',
+          'Generic PETG',
+          'Generic PETG',
+          'Generic PETG'
+        ],
+        filament_colour: [
+          baseColorHex.toUpperCase(),
+          '#1E1E1E',
+          '#E11D48',
+          '#F59E0B'
+        ],
+        filament_type: ['PETG', 'PETG', 'PETG', 'PETG'],
+        filament_vendor: ['Generic', 'Generic', 'Generic', 'Generic']
+      }, null, 2);
+
+      const sliceInfoXml = `<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <header>
+    <header_item key="X-BBL-Client-Type" value="slicer"/>
+    <header_item key="X-BBL-Client-Version" value="01.09.00.00"/>
+  </header>
+  <plate>
+    <filament id="1" type="PETG" color="${baseColorHex.toUpperCase()}"/>
+    <filament id="2" type="PETG" color="#1E1E1E"/>
+    <filament id="3" type="PETG" color="#E11D48"/>
+    <filament id="4" type="PETG" color="#F59E0B"/>
+  </plate>
+</config>`;
+
       const zipped = zipSync({
         '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -1479,7 +1535,10 @@ ${componentsXml}      </components>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
  <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`),
-        '3D/3dmodel.model': strToU8(modelXml)
+        '3D/3dmodel.model': strToU8(modelXml),
+        'Metadata/model_settings.config': strToU8(modelSettingsXml),
+        'Metadata/project_settings.config': strToU8(projectSettingsJson),
+        'Metadata/slice_info.config': strToU8(sliceInfoXml),
       });
 
       const blob = new Blob([zipped.buffer], { type: 'application/vnd.ms-package.3dmanufacturing-3dmodel' });
