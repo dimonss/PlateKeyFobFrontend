@@ -932,7 +932,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cz2Default: number
     ) => {
       for (const cIdx of [1, 2, 3]) {
-        const cz2 = (cIdx === 2 || cIdx === 3) && !isBack ? cz2Default - 0.15 : cz2Default;
+        const cz2 = cz2Default;
         const targetArr = positionsByColor[cIdx];
 
         // 1. Top Face (+Z normal) and 2. Bottom Face (-Z normal) with Horizontal Run-Length Merging
@@ -1079,21 +1079,27 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.fillText(config.regionCode || '01', 150, 124);
       cleanCtx.restore();
 
-      // Flag of Kyrgyz Republic
+      // Flag of Kyrgyz Republic (Red rectangle + Clean Yellow sun circle for 0.4mm nozzle)
       const flagX = 66;
       const flagY = 154;
       const flagW = 80;
       const flagH = 52;
+
       cleanCtx.save();
+      // 1. Red flag background with rounded corners
+      cleanCtx.fillStyle = '#E11D48';
       cleanCtx.beginPath();
       drawRoundedRect(cleanCtx, flagX, flagY, flagW, flagH, 3);
-      cleanCtx.clip();
-      cleanCtx.fillStyle = '#E11D48';
-      cleanCtx.fillRect(flagX, flagY, flagW, flagH);
-      // Yellow sun emblem circle
+      cleanCtx.fill();
+
+      // 2. Yellow sun circle in center (radius 17px = ~2.4mm physical diameter for clean 0.4mm nozzle slicing)
+      const sunCenterX = flagX + flagW / 2;
+      const sunCenterY = flagY + flagH / 2;
+      const sunRadius = 17;
+
       cleanCtx.fillStyle = '#F59E0B';
       cleanCtx.beginPath();
-      cleanCtx.arc(flagX + flagW / 2, flagY + flagH / 2, 14, 0, Math.PI * 2);
+      cleanCtx.arc(sunCenterX, sunCenterY, sunRadius, 0, Math.PI * 2);
       cleanCtx.fill();
       cleanCtx.restore();
 
