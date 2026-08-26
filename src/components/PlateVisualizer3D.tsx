@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
@@ -912,7 +913,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     else if (config.material === 'carbon') baseColorHex = 0x27272a;
     else if (config.material === 'plastic') baseColorHex = 0xcbd5e1;
 
-    const baseGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    const rawBaseGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    const baseGeo = BufferGeometryUtils.mergeVertices(rawBaseGeo, 1e-4);
+    baseGeo.computeVertexNormals();
     const baseMat = new THREE.MeshStandardMaterial({ color: baseColorHex, roughness: 0.3 });
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
     baseMesh.name = 'BasePlate_Color_0';
@@ -1322,8 +1325,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     for (const [cIdxStr, posArray] of Object.entries(positionsByColor)) {
       const cIdx = Number(cIdxStr);
       if (posArray.length > 0) {
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+        const rawGeo = new THREE.BufferGeometry();
+        rawGeo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+        const geo = BufferGeometryUtils.mergeVertices(rawGeo, 1e-4);
         geo.computeVertexNormals();
 
         const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
@@ -1423,16 +1427,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             const v1 = indexAttr.getX(i);
             const v2 = indexAttr.getX(i + 1);
             const v3 = indexAttr.getX(i + 2);
-            trianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" pid="1" p1="${part.colorIndex}" />\n`;
+            trianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`;
           }
         } else {
           for (let i = 0; i < posAttr.count; i += 3) {
-            trianglesXml += `        <triangle v1="${i}" v2="${i + 1}" v3="${i + 2}" pid="1" p1="${part.colorIndex}" />\n`;
+            trianglesXml += `        <triangle v1="${i}" v2="${i + 1}" v3="${i + 2}" />\n`;
           }
         }
 
-        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}" pid="1" pindex="${part.colorIndex}">
-      <metadata name="extruder">${part.colorIndex + 1}</metadata>
+        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}">
       <mesh>
         <vertices>
 ${verticesXml}        </vertices>
@@ -1451,11 +1454,8 @@ ${trianglesXml}        </triangles>
       const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US"
   xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
-  xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"
-  xmlns:BambuStudio="http://schemas.bambulab.com/package/2021/bambustudio">
+  xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
   <metadata name="Application">BambuStudio</metadata>
-  <metadata name="BambuStudio:Version">01.09.00.00</metadata>
-  <metadata name="PrinterModel">Bambu Lab P2S</metadata>
   <metadata name="Title">${getBaseFileName()}</metadata>
   <resources>
     <m:colorgroup id="1">
@@ -1495,6 +1495,8 @@ ${modelSettingsPartsXml}  </object>
         printer_model: 'Bambu Lab P1S',
         printer_settings_id: 'Bambu Lab P1S 0.4 nozzle',
         print_settings_id: '0.20mm Standard @BBL P1S',
+        wall_generator: 'arachne',
+        detect_thin_wall: '1',
         filament_settings_id: [
           'Generic PETG',
           'Generic PETG',
