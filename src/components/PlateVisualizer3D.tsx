@@ -386,21 +386,21 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     if (!isBack) {
       drawFrontSide(ctx, flagImg);
-      // Punch transparent hole in texture at top-right (x = 1015, y = 45, r = 21)
+      // Punch transparent hole in texture at top-right (x = 1004, y = 58, r = 19)
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(1015, 45, 21, 0, Math.PI * 2);
+      ctx.arc(1004, 58, 19, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     } else {
       drawBackSide(ctx, logoImg);
-      // Punch transparent hole in texture at top-left of back side (x = 45, y = 45, r = 21)
+      // Punch transparent hole in texture at top-left of back side (x = 56, y = 58, r = 19)
       // This matches the physical 3D hole location on back view
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(45, 45, 21, 0, Math.PI * 2);
+      ctx.arc(56, 58, 19, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -579,7 +579,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       frontShape.quadraticCurveTo(x, y, x + radius3d, y);
 
       const frontHole = new THREE.Path();
-      frontHole.absarc(x + width3d - 0.34, y + height3d - 0.36, 0.16, 0, Math.PI * 2, true);
+      frontHole.absarc(x + width3d - 0.425, y + height3d - 0.437, 0.14, 0, Math.PI * 2, true);
       frontShape.holes.push(frontHole);
 
       // Create back shape with hole at top-left (so when rotated 180° on Y, hole perfectly aligns at top-right of scene / top-left of back view)
@@ -595,7 +595,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       backShape.quadraticCurveTo(x, y, x + radius3d, y);
 
       const backHole = new THREE.Path();
-      backHole.absarc(x + 0.34, y + height3d - 0.36, 0.16, 0, Math.PI * 2, true);
+      backHole.absarc(x + 0.425, y + height3d - 0.437, 0.14, 0, Math.PI * 2, true);
       backShape.holes.push(backHole);
 
       const extrudeSettings = {
@@ -876,9 +876,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const height = 16.0;   // 16.0 mm height (exact 1:7 scale of 112mm real plate)
     const radius = 1.85;   // 1.85 mm corner radius
     const baseThickness = 2.0; // 2.0 mm base thickness (10 layers at 0.2mm)
-    const holeX = 33.8;    // 34.0 mm hole center X (moved to edge, right against black border)
-    const holeY = 4.8;     // 5.0 mm hole center Y (moved to edge, right against black border)
-    const holeRadius = 1.7; // 1.7 mm hole radius (3.4 mm diameter through-hole)
+    const holeX = 33.2;    // 33.2 mm hole center X (comfortably inside border)
+    const holeY = 4.2;     // 4.2 mm hole center Y (comfortably inside border)
+    const holeRadius = 1.3; // 1.3 mm hole radius (2.6 mm diameter through-hole, optimal for 2mm keyring)
 
     // 1. Base Plate Solid Body with Keyring Hole
     const shape = new THREE.Shape();
@@ -1064,14 +1064,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.stroke();
       cleanCtx.restore();
 
-      // Clear out keyring hole area completely (r = 32px = ~2.25mm radius, > 1.7mm physical hole)
-      cleanCtx.save();
-      cleanCtx.globalCompositeOperation = 'destination-out';
-      cleanCtx.beginPath();
-      cleanCtx.arc(1012, 49, 32, 0, Math.PI * 2);
-      cleanCtx.fill();
-      cleanCtx.restore();
-
       // Vertical separator line
       cleanCtx.save();
       cleanCtx.strokeStyle = '#1E1E1E';
@@ -1189,7 +1181,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const cellCenterY = height / 2 - (gy + 0.5) * cellH;
 
           // Always ensure keyring hole is 100% clear and unobstructed
-          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.6) {
+          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.2) {
             continue;
           }
 
@@ -1218,7 +1210,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         for (let gx = 1; gx < sampleW - 1; gx++) {
           const cellCenterX = -width / 2 + (gx + 0.5) * cellW;
           const cellCenterY = height / 2 - (gy + 0.5) * cellH;
-          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.6) continue;
+          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.2) continue;
 
           if (grid[gy][gx] === 0) {
             const lr = grid[gy][gx - 1] === 1 && grid[gy][gx + 1] === 1;
@@ -1260,14 +1252,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         cleanBackCtx.beginPath();
         drawRoundedRect(cleanBackCtx, 14.5, 14.5, 1031, 215, 12);
         cleanBackCtx.stroke();
-        cleanBackCtx.restore();
-
-        // Clear out keyring hole area completely on back side (r = 32px = ~2.25mm radius, > 1.7mm physical hole)
-        cleanBackCtx.save();
-        cleanBackCtx.globalCompositeOperation = 'destination-out';
-        cleanBackCtx.beginPath();
-        cleanBackCtx.arc(48, 49, 32, 0, Math.PI * 2);
-        cleanBackCtx.fill();
         cleanBackCtx.restore();
 
         const hasText = !!(config.backSideText && config.backSideText.trim());
@@ -1343,7 +1327,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             const cellWorldX = width / 2 - (gx + 0.5) * cellW;
             const cellWorldY = height / 2 - (gy + 0.5) * cellH;
 
-            if (Math.hypot(cellWorldX - holeX, cellWorldY - holeY) <= holeRadius + 0.6) {
+            if (Math.hypot(cellWorldX - holeX, cellWorldY - holeY) <= holeRadius + 0.2) {
               continue;
             }
 
@@ -1509,9 +1493,9 @@ ${trianglesXml}        </triangles>
 
       // Add explicit negative cylinder cutter to guarantee 100% through-hole subtraction in BambuStudio / PrusaSlicer
       const cutterObjectId = nextObjectId++;
-      const holeX = 33.8;
-      const holeY = 4.8;
-      const holeRadius = 1.7;
+      const holeX = 33.2;
+      const holeY = 4.2;
+      const holeRadius = 1.3;
       const cutterGeo = new THREE.CylinderGeometry(holeRadius, holeRadius, 6.0, 32);
       cutterGeo.rotateX(Math.PI / 2); // align with Z axis
       cutterGeo.translate(holeX, holeY, 1.0); // centered along Z from -2.0 to +4.0

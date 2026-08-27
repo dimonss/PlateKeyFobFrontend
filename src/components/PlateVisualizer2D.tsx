@@ -306,10 +306,10 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '7px',
-                right: '7px',
-                width: '18px',
-                height: '18px',
+                top: '8px',
+                right: '8px',
+                width: '14px',
+                height: '14px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%)',
                 border: '1.5px solid rgba(148, 163, 184, 0.8)',
@@ -342,10 +342,10 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '7px',
-                left: '7px',
-                width: '18px',
-                height: '18px',
+                top: '8px',
+                left: '8px',
+                width: '14px',
+                height: '14px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%)',
                 border: '1.5px solid rgba(148, 163, 184, 0.8)',
