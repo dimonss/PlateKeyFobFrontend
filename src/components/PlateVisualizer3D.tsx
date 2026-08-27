@@ -1384,8 +1384,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           }
         }
 
-        // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.4mm into base plate
-        buildWatertightRelief(gridBack, true, 0.0, 0.4);
+        // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.2mm (1 layer at 0.2mm layer height) into base plate
+        buildWatertightRelief(gridBack, true, 0.0, 0.2);
       }
     }
 
