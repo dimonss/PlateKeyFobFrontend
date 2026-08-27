@@ -237,7 +237,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Правило отправки:</span>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#34d399' }}>
-                  Доставка: Воскресенье, {formatSundayText(nextSunday)}
+                  Доставка: {formatSundayText(nextSunday)}
                 </div>
               </div>
             </div>

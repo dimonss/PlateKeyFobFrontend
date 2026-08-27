@@ -19,7 +19,8 @@ export function formatSundayText(date: Date): string {
     year: 'numeric',
     weekday: 'long',
   };
-  return date.toLocaleDateString('ru-RU', options);
+  const formatted = date.toLocaleDateString('ru-RU', options);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
 export const SundayDeliveryNotice: React.FC = () => {
@@ -80,7 +81,7 @@ export const SundayDeliveryNotice: React.FC = () => {
               <span className="sunday-notice-batch-text" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Все заказы отправляются батчем</span>
             </div>
             <h4 className="sunday-notice-title" style={{ fontSize: '1rem', fontWeight: 700, marginTop: '2px', color: 'var(--text-main)' }}>
-              Ближайшая доставка: <span style={{ color: '#f43f5e' }}>Воскресенье, {formatSundayText(nextSunday)}</span>
+              Ближайшая доставка: <span style={{ color: '#f43f5e' }}>{formatSundayText(nextSunday)}</span>
             </h4>
           </div>
         </div>
