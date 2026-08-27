@@ -36,6 +36,12 @@ export async function updateOrderStatusApi(
   });
 }
 
+export async function deleteOrderApi(orderId: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/admin/orders/${orderId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchAdminStats(): Promise<AdminStats> {
   return apiRequest<AdminStats>('/admin/stats');
 }

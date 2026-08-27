@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock, Eye, Box } from 'lucide-react';
-import { fetchAdminOrders, updateOrderStatusApi, fetchAdminStats, type AdminStats } from '../api/admin';
+import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock, Eye, Box, Trash2 } from 'lucide-react';
+import { fetchAdminOrders, updateOrderStatusApi, deleteOrderApi, fetchAdminStats, type AdminStats } from '../api/admin';
 import type { OrderItem } from '../api/orders';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +56,21 @@ export const AdminDashboard: React.FC = () => {
       fetchAdminStats().then(setStats);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка обновления';
+      showToast({ type: 'error', title: 'Ошибка', message: msg });
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    if (!window.confirm(`Вы уверены, что хотите удалить заказ #${orderNumber}? Это действие необратимо.`)) {
+      return;
+    }
+    try {
+      await deleteOrderApi(orderId);
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      showToast({ type: 'success', title: 'Заказ удален', message: `Заказ #${orderNumber} успешно удален` });
+      fetchAdminStats().then(setStats);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Ошибка при удалении заказа';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
     }
   };
@@ -308,13 +323,30 @@ export const AdminDashboard: React.FC = () => {
                       </span>
                     </div>
 
-                    <div style={{ marginTop: 'auto', paddingTop: '10px' }}>
+                    <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', gap: '8px' }}>
                       <button
                         className="btn btn-secondary"
-                        style={{ width: '100%', padding: '8px', fontSize: '0.85rem' }}
+                        style={{ flex: 1, padding: '8px', fontSize: '0.85rem' }}
                         onClick={() => setSelectedOrderForModal(order)}
                       >
                         3D Модель и Экспорт Файла
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '0.85rem',
+                          color: '#f43f5e',
+                          borderColor: 'rgba(244, 63, 94, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                        onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
+                        title="Удалить заказ"
+                      >
+                        <Trash2 size={15} />
+                        <span>Удалить</span>
                       </button>
                     </div>
                   </div>
@@ -410,13 +442,30 @@ export const AdminDashboard: React.FC = () => {
                       </td>
 
                       <td style={{ padding: '14px 18px' }}>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                          onClick={() => setSelectedOrderForModal(order)}
-                        >
-                          Просмотр макета
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                            onClick={() => setSelectedOrderForModal(order)}
+                          >
+                            Просмотр макета
+                          </button>
+                          <button
+                            className="btn btn-secondary"
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '0.75rem',
+                              color: '#f43f5e',
+                              borderColor: 'rgba(244, 63, 94, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
+                            title="Удалить заказ"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
 
                     </tr>
