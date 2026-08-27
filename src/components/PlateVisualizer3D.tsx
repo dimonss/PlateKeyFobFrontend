@@ -965,15 +965,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
                 spanCx2 = width / 2 - startGx * cellW;
               }
 
-              // Strictly ensure no relief geometry enters into keyring hole cylinder
-              const d1 = Math.hypot(spanCx1 - holeX, spanCy1 - holeY);
-              const d2 = Math.hypot(spanCx2 - holeX, spanCy1 - holeY);
-              const d3 = Math.hypot(spanCx1 - holeX, spanCy2 - holeY);
-              const d4 = Math.hypot(spanCx2 - holeX, spanCy2 - holeY);
-              if (Math.min(d1, d2, d3, d4) <= holeRadius + 0.35) {
-                continue;
-              }
-
               // Top Face (+Z normal)
               targetArr.push(
                 spanCx1, spanCy1, cz2,   spanCx2, spanCy1, cz2,   spanCx2, spanCy2, cz2,
@@ -1008,14 +999,6 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             } else {
               cx1 = width / 2 - (gx + 1) * cellW;
               cx2 = width / 2 - gx * cellW;
-            }
-
-            const d1 = Math.hypot(cx1 - holeX, cy1 - holeY);
-            const d2 = Math.hypot(cx2 - holeX, cy1 - holeY);
-            const d3 = Math.hypot(cx1 - holeX, cy2 - holeY);
-            const d4 = Math.hypot(cx2 - holeX, cy2 - holeY);
-            if (Math.min(d1, d2, d3, d4) <= holeRadius + 0.35) {
-              continue;
             }
 
             // North Wall (facing +Y normal)
@@ -1523,6 +1506,55 @@ ${trianglesXml}        </triangles>
       <metadata key="extruder" value="${part.colorIndex + 1}"/>
     </part>\n`;
       }
+
+      // Add explicit negative cylinder cutter to guarantee 100% through-hole subtraction in BambuStudio / PrusaSlicer
+      const cutterObjectId = nextObjectId++;
+      const holeX = 33.8;
+      const holeY = 4.8;
+      const holeRadius = 1.7;
+      const cutterGeo = new THREE.CylinderGeometry(holeRadius, holeRadius, 6.0, 32);
+      cutterGeo.rotateX(Math.PI / 2); // align with Z axis
+      cutterGeo.translate(holeX, holeY, 1.0); // centered along Z from -2.0 to +4.0
+
+      const cutterPosAttr = cutterGeo.attributes.position;
+      const cutterIndexAttr = cutterGeo.index;
+      let cutterVerticesXml = '';
+      for (let i = 0; i < cutterPosAttr.count; i++) {
+        const cx = cutterPosAttr.getX(i);
+        const cy = cutterPosAttr.getY(i);
+        const cz = cutterPosAttr.getZ(i);
+        cutterVerticesXml += `        <vertex x="${cx.toFixed(4)}" y="${cy.toFixed(4)}" z="${cz.toFixed(4)}" />\n`;
+      }
+      let cutterTrianglesXml = '';
+      if (cutterIndexAttr) {
+        for (let i = 0; i < cutterIndexAttr.count; i += 3) {
+          const v1 = cutterIndexAttr.getX(i);
+          const v2 = cutterIndexAttr.getX(i + 1);
+          const v3 = cutterIndexAttr.getX(i + 2);
+          cutterTrianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`;
+        }
+      }
+
+      objectsXml += `    <object id="${cutterObjectId}" type="model" name="Keyring_Hole_Cutter">
+      <mesh>
+        <vertices>
+${cutterVerticesXml}        </vertices>
+        <triangles>
+${cutterTrianglesXml}        </triangles>
+      </mesh>
+    </object>\n`;
+
+      componentsXml += `      <component objectid="${cutterObjectId}" />\n`;
+      modelSettingsPartsXml += `    <part id="${cutterObjectId}" subtype="negative_part">
+      <metadata key="name" value="Keyring_Hole_Cutter"/>
+      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+      <metadata key="source_file" value="Keyring_Hole_Cutter.stl"/>
+      <metadata key="source_object_id" value="0"/>
+      <metadata key="source_volume_id" value="0"/>
+      <metadata key="source_offset_x" value="0"/>
+      <metadata key="source_offset_y" value="0"/>
+      <metadata key="source_offset_z" value="0"/>
+    </part>\n`;
 
       const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US"
