@@ -1074,16 +1074,12 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.stroke();
       cleanCtx.restore();
 
-      // Region code (bold stroke + fill to prevent slicer voids)
+      // Region code (optimal 2-perimeter stroke width ~0.84mm for 0.4mm nozzle, perfectly placing 2 adjacent perimeters without internal voids)
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
-      cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 6;
-      cleanCtx.lineJoin = 'round';
       cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
       cleanCtx.textAlign = 'center';
       cleanCtx.textBaseline = 'alphabetic';
-      cleanCtx.strokeText(config.regionCode || '01', 150, 124);
       cleanCtx.fillText(config.regionCode || '01', 150, 124);
       cleanCtx.restore();
 
@@ -1137,34 +1133,25 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         const startX = 670 - totalW / 2;
 
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.strokeStyle = '#1E1E1E';
-        cleanCtx.lineWidth = 7;
-        cleanCtx.lineJoin = 'round';
         cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         cleanCtx.textAlign = 'left';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.strokeText(parsed.digits, startX, 194);
         cleanCtx.fillText(parsed.digits, startX, 194);
 
         if (parsed.letters) {
-          // Letters at 152px have naturally thinner diagonal strokes (e.g. X, R, A)
-          // lineWidth = 11 dilates strokes to >= 1.6mm so Bambu Studio fills them with solid top surface infill
-          cleanCtx.lineWidth = 11;
           cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
-          cleanCtx.strokeText(parsed.letters, startX + digitsW + dx, 194);
           cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
         }
       } else {
         const textLen = parsed.digits.length;
         const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
         cleanCtx.fillStyle = '#1E1E1E';
-        cleanCtx.strokeStyle = '#1E1E1E';
-        cleanCtx.lineWidth = 9;
-        cleanCtx.lineJoin = 'round';
         cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'center';
         cleanCtx.textBaseline = 'alphabetic';
-        cleanCtx.strokeText(parsed.digits, 670, 192);
+        try {
+          cleanCtx.letterSpacing = '4px';
+        } catch (e) {}
         cleanCtx.fillText(parsed.digits, 670, 192);
       }
       cleanCtx.restore();
@@ -1388,7 +1375,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       if (document.fonts) {
         try {
           await document.fonts.load("600 184px 'Euro Plate'");
-          await document.fonts.load("800 80px 'Euro Plate'");
+          await document.fonts.load("600 152px 'Euro Plate'");
+          await document.fonts.load("600 112px 'Euro Plate'");
+          await document.fonts.load("900 62px 'Euro Plate'");
           await document.fonts.load("700 88px 'Oswald'");
         } catch (e) {}
         await document.fonts.ready;
@@ -1651,6 +1640,13 @@ ${modelSettingsPartsXml}  </object>
     setIsExporting('stl');
     try {
       if (document.fonts) {
+        try {
+          await document.fonts.load("600 184px 'Euro Plate'");
+          await document.fonts.load("600 152px 'Euro Plate'");
+          await document.fonts.load("600 112px 'Euro Plate'");
+          await document.fonts.load("900 62px 'Euro Plate'");
+          await document.fonts.load("700 88px 'Oswald'");
+        } catch (e) {}
         await document.fonts.ready;
       }
       const printableGroup = buildPrintable3DGroup();
