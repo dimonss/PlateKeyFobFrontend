@@ -386,21 +386,21 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     if (!isBack) {
       drawFrontSide(ctx, flagImg);
-      // Punch transparent hole in texture at top-right (x = 1004, y = 58, r = 19)
+      // Punch transparent hole in texture at top-right (x = 1010, y = 53, r = 19)
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(1004, 58, 19, 0, Math.PI * 2);
+      ctx.arc(1010, 53, 19, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     } else {
       drawBackSide(ctx, logoImg);
-      // Punch transparent hole in texture at top-left of back side (x = 56, y = 58, r = 19)
+      // Punch transparent hole in texture at top-left of back side (x = 50, y = 53, r = 19)
       // This matches the physical 3D hole location on back view
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(56, 58, 19, 0, Math.PI * 2);
+      ctx.arc(50, 53, 19, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -579,7 +579,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       frontShape.quadraticCurveTo(x, y, x + radius3d, y);
 
       const frontHole = new THREE.Path();
-      frontHole.absarc(x + width3d - 0.425, y + height3d - 0.437, 0.14, 0, Math.PI * 2, true);
+      frontHole.absarc(x + width3d - 0.377, y + height3d - 0.403, 0.14, 0, Math.PI * 2, true);
       frontShape.holes.push(frontHole);
 
       // Create back shape with hole at top-left (so when rotated 180° on Y, hole perfectly aligns at top-right of scene / top-left of back view)
@@ -595,7 +595,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       backShape.quadraticCurveTo(x, y, x + radius3d, y);
 
       const backHole = new THREE.Path();
-      backHole.absarc(x + 0.425, y + height3d - 0.437, 0.14, 0, Math.PI * 2, true);
+      backHole.absarc(x + 0.377, y + height3d - 0.403, 0.14, 0, Math.PI * 2, true);
       backShape.holes.push(backHole);
 
       const extrudeSettings = {
@@ -876,8 +876,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const height = 16.0;   // 16.0 mm height (exact 1:7 scale of 112mm real plate)
     const radius = 1.85;   // 1.85 mm corner radius
     const baseThickness = 2.0; // 2.0 mm base thickness (10 layers at 0.2mm)
-    const holeX = 33.2;    // 33.2 mm hole center X (comfortably inside border)
-    const holeY = 4.2;     // 4.2 mm hole center Y (comfortably inside border)
+    const holeX = 33.65;   // 33.65 mm hole center X (equally distanced: 3.50mm to right edge & top edge)
+    const holeY = 4.50;    // 4.50 mm hole center Y (equally distanced: 3.50mm to right edge & top edge)
     const holeRadius = 1.3; // 1.3 mm hole radius (2.6 mm diameter through-hole, optimal for 2mm keyring)
 
     // 1. Base Plate Solid Body with Keyring Hole
@@ -1493,8 +1493,8 @@ ${trianglesXml}        </triangles>
 
       // Add explicit negative cylinder cutter to guarantee 100% through-hole subtraction in BambuStudio / PrusaSlicer
       const cutterObjectId = nextObjectId++;
-      const holeX = 33.2;
-      const holeY = 4.2;
+      const holeX = 33.65;
+      const holeY = 4.50;
       const holeRadius = 1.3;
       const cutterGeo = new THREE.CylinderGeometry(holeRadius, holeRadius, 6.0, 32);
       cutterGeo.rotateX(Math.PI / 2); // align with Z axis

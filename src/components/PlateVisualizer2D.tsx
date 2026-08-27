@@ -306,8 +306,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '8px',
-                right: '8px',
+                top: '5px',
+                right: '5px',
                 width: '14px',
                 height: '14px',
                 borderRadius: '50%',
@@ -342,8 +342,8 @@ export const PlateVisualizer2D: React.FC<{ config: PlateConfig }> = ({ config })
             <div
               style={{
                 position: 'absolute',
-                top: '8px',
-                left: '8px',
+                top: '5px',
+                left: '5px',
                 width: '14px',
                 height: '14px',
                 borderRadius: '50%',
