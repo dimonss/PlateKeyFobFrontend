@@ -1103,7 +1103,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       cleanCtx.save();
       cleanCtx.fillStyle = '#1E1E1E';
       cleanCtx.strokeStyle = '#1E1E1E';
-      cleanCtx.lineWidth = 4;
+      cleanCtx.lineWidth = 6;
       cleanCtx.lineJoin = 'round';
       cleanCtx.font = "600 112px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
       cleanCtx.textAlign = 'center';
@@ -1163,7 +1163,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
         cleanCtx.fillStyle = '#1E1E1E';
         cleanCtx.strokeStyle = '#1E1E1E';
-        cleanCtx.lineWidth = 5;
+        cleanCtx.lineWidth = 7;
         cleanCtx.lineJoin = 'round';
         cleanCtx.font = "600 184px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
         cleanCtx.textAlign = 'left';
@@ -1172,6 +1172,9 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         cleanCtx.fillText(parsed.digits, startX, 194);
 
         if (parsed.letters) {
+          // Letters at 152px have naturally thinner diagonal strokes (e.g. X, R, A)
+          // lineWidth = 11 dilates strokes to >= 1.6mm so Bambu Studio fills them with solid top surface infill
+          cleanCtx.lineWidth = 11;
           cleanCtx.font = "600 152px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace";
           cleanCtx.strokeText(parsed.letters, startX + digitsW + dx, 194);
           cleanCtx.fillText(parsed.letters, startX + digitsW + dx, 194);
@@ -1181,7 +1184,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         const fontSize = (textLen > 8 ? 54 : textLen > 6 ? 70 : 86) * 2;
         cleanCtx.fillStyle = '#1E1E1E';
         cleanCtx.strokeStyle = '#1E1E1E';
-        cleanCtx.lineWidth = 5;
+        cleanCtx.lineWidth = 9;
         cleanCtx.lineJoin = 'round';
         cleanCtx.font = `600 ${fontSize}px 'Euro Plate', 'FE-Schrift', 'License Plate', 'Oswald', 'Bebas Neue', monospace`;
         cleanCtx.textAlign = 'center';
@@ -1224,6 +1227,30 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             colorIdx = 1; // Black Text/Digits/Border
           }
           grid[gy][gx] = colorIdx;
+        }
+      }
+
+      // Morphological pinch & acute notch filter to eliminate micro-voids in stroke junctions (white dots)
+      for (let gy = 1; gy < sampleH - 1; gy++) {
+        for (let gx = 1; gx < sampleW - 1; gx++) {
+          const cellCenterX = -width / 2 + (gx + 0.5) * cellW;
+          const cellCenterY = height / 2 - (gy + 0.5) * cellH;
+          if (Math.hypot(cellCenterX - holeX, cellCenterY - holeY) <= holeRadius + 0.6) continue;
+
+          if (grid[gy][gx] === 0) {
+            const lr = grid[gy][gx - 1] === 1 && grid[gy][gx + 1] === 1;
+            const tb = grid[gy - 1][gx] === 1 && grid[gy + 1][gx] === 1;
+            let blackNeighbors = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dy === 0 && dx === 0) continue;
+                if (grid[gy + dy][gx + dx] === 1) blackNeighbors++;
+              }
+            }
+            if (lr || tb || blackNeighbors >= 5) {
+              grid[gy][gx] = 1;
+            }
+          }
         }
       }
 
@@ -1545,6 +1572,8 @@ ${modelSettingsPartsXml}  </object>
         detect_thin_wall: '1',
         filter_out_gap_fill: '0',
         gap_infill_speed: '30',
+        infill_wall_overlap: '25%',
+        minimum_sparse_infill_area: '0',
         top_surface_pattern: 'monotonicline',
         filament_settings_id: [
           'Generic PETG',
