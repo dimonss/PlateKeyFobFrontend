@@ -931,11 +931,11 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     const buildWatertightRelief = (
       grid: number[][],
       isBack: boolean,
-      cz1: number,
+      cz1OrFn: number | ((cIdx: number) => number),
       cz2Default: number
     ) => {
       for (const cIdx of [1, 2, 3]) {
-        // Front relief: keep all colors coplanar
+        const cz1 = typeof cz1OrFn === 'function' ? cz1OrFn(cIdx) : cz1OrFn;
         const cz2 = cz2Default;
         const targetArr = positionsByColor[cIdx];
 
@@ -1216,8 +1216,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
       }
 
-      // Front relief: Flush with top of base plate (z = 2.0mm) and raised to 2.3mm (+0.3mm above base plate, halved from 0.6mm!)
-      buildWatertightRelief(grid, false, baseThickness, baseThickness + 0.3);
+      // Front relief:
+      // - Black text & border (cIdx = 1): Inlaid 0.2mm (1 layer) into base (Z = 1.8...2.0mm) + raised 0.4mm (Z = 2.0...2.4mm)
+      // - Flag Red (cIdx = 2) & Yellow (cIdx = 3): Only the top 2 raised layers (Z = 2.0...2.4mm), preventing unnecessary filament changes on layer 10
+      buildWatertightRelief(
+        grid,
+        false,
+        (cIdx) => (cIdx === 1 ? baseThickness - 0.2 : baseThickness),
+        baseThickness + 0.4
+      );
     }
 
     // 3. High-Definition BACK 3D Relief Canvas (1060 x 244)
