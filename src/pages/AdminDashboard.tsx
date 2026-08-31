@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { PlateVisualizer2D, SVGPlate2D } from '../components/PlateVisualizer2D';
 import { PlateVisualizer3D } from '../components/PlateVisualizer3D';
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +20,9 @@ export const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderForModal, setSelectedOrderForModal] = useState<OrderItem | null>(null);
   const [modalViewMode, setModalViewMode] = useState<'3d' | '2d'>('3d');
+
+  const [orderToDelete, setOrderToDelete] = useState<OrderItem | null>(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
 
   const [viewType, setViewType] = useState<'cards' | 'table'>('cards');
 
@@ -60,18 +64,24 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
-    if (!window.confirm(`Вы уверены, что хотите удалить заказ #${orderNumber}? Это действие необратимо.`)) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+    setIsDeletingOrder(true);
     try {
-      await deleteOrderApi(orderId);
-      setOrders(prev => prev.filter(o => o.id !== orderId));
-      showToast({ type: 'success', title: 'Заказ удален', message: `Заказ #${orderNumber} успешно удален` });
+      await deleteOrderApi(orderToDelete.id);
+      setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
+      showToast({
+        type: 'success',
+        title: 'Заказ удален',
+        message: `Заказ #${orderToDelete.orderNumber} успешно удален`,
+      });
       fetchAdminStats().then(setStats);
+      setOrderToDelete(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка при удалении заказа';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
+    } finally {
+      setIsDeletingOrder(false);
     }
   };
 
@@ -342,7 +352,7 @@ export const AdminDashboard: React.FC = () => {
                           alignItems: 'center',
                           gap: '6px',
                         }}
-                        onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
+                        onClick={() => setOrderToDelete(order)}
                         title="Удалить заказ"
                       >
                         <Trash2 size={15} />
@@ -460,7 +470,7 @@ export const AdminDashboard: React.FC = () => {
                               display: 'flex',
                               alignItems: 'center',
                             }}
-                            onClick={() => handleDeleteOrder(order.id, order.orderNumber)}
+                            onClick={() => setOrderToDelete(order)}
                             title="Удалить заказ"
                           >
                             <Trash2 size={14} />
@@ -580,6 +590,15 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        order={orderToDelete}
+        isOpen={!!orderToDelete}
+        onClose={() => !isDeletingOrder && setOrderToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeletingOrder}
+      />
 
     </div>
   );
