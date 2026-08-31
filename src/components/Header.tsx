@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
+import { LogoutModal } from './LogoutModal';
 
 interface HeaderProps {
   activeTab: 'customizer' | 'track' | 'orders' | 'admin';
@@ -12,15 +14,41 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenAuth }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleTabClick = (tab: 'customizer' | 'track' | 'orders' | 'admin') => {
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
   };
 
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      showToast({
+        type: 'success',
+        title: 'Выход выполнен',
+        message: 'Вы успешно вышли из учетной записи',
+      });
+      setIsLogoutModalOpen(false);
+      setIsMobileMenuOpen(false);
+    } catch {
+      showToast({
+        type: 'error',
+        title: 'Ошибка',
+        message: 'Не удалось выполнить выход',
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
-    <header className="glass header-container" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '12px 24px', marginBottom: '24px' }}>
+    <>
+      <header className="glass header-container" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '12px 24px', marginBottom: '24px' }}>
       <div className="header-content" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         
         {/* Brand Logo */}
@@ -111,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
                 {user.firstName}
               </div>
               <button
-                onClick={logout}
+                onClick={() => setIsLogoutModalOpen(true)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', marginLeft: '2px', display: 'flex', alignItems: 'center' }}
                 title="Выйти"
               >
@@ -174,9 +202,32 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
               <ShieldCheck size={16} /> Админ-Панель
             </button>
           )}
+
+          {user && (
+            <button
+              className="btn btn-secondary"
+              style={{ color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.3)', marginTop: '6px' }}
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsLogoutModalOpen(true);
+              }}
+            >
+              <LogOut size={16} /> Выйти из аккаунта
+            </button>
+          )}
         </div>
       )}
     </header>
-  );
+
+    {/* Logout Confirmation Modal (rendered via Portal) */}
+    <LogoutModal
+      isOpen={isLogoutModalOpen}
+      onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+      onConfirm={handleConfirmLogout}
+      user={user}
+      isLoading={isLoggingOut}
+    />
+  </>
+);
 };
 

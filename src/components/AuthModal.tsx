@@ -83,6 +83,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   return (
     <div className="auth-modal-overlay" onClick={handleOverlayClick}>
       <div className="auth-modal-card">
+        {/* Mobile Pull Handle */}
+        <div className="bottom-sheet-handle" />
+
         {/* Glow ambient background light */}
         <div className="auth-modal-glow-orb" />
 

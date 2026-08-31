@@ -144,6 +144,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   return (
     <div className="modal-overlay">
       <div className="modal-content glass-elevated" style={{ padding: '28px' }}>
+        {/* Mobile Pull Handle */}
+        <div className="bottom-sheet-handle" />
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>
             {completedOrder ? 'Заказ Оформлен!' : 'Оформление Заказа Брелка'}
