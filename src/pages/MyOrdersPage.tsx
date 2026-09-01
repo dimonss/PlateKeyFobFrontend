@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 
 interface MyOrdersPageProps {
   onGoToCustomizer: () => void;
-  onGoToTrack: () => void;
+  onGoToTrack: (orderNumber?: string) => void;
 }
 
 export const MyOrdersPage: React.FC<MyOrdersPageProps> = ({ onGoToCustomizer, onGoToTrack }) => {
@@ -84,7 +84,7 @@ export const MyOrdersPage: React.FC<MyOrdersPageProps> = ({ onGoToCustomizer, on
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
-              onClick={onGoToTrack}
+              onClick={() => onGoToTrack()}
               className="btn btn-secondary"
               style={{ padding: '8px 14px', fontSize: '0.85rem' }}
               title="Отследить по номеру"
@@ -141,11 +141,19 @@ export const MyOrdersPage: React.FC<MyOrdersPageProps> = ({ onGoToCustomizer, on
               {/* Order Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>
                       Заказ #{order.orderNumber}
                     </h3>
                     {getStatusBadge(order.status)}
+                    <button
+                      onClick={() => onGoToTrack(order.orderNumber)}
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      title="Отследить этот заказ"
+                    >
+                      <Search size={12} /> Отследить
+                    </button>
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                     Оформлен: {formatDate(order.createdAt)}

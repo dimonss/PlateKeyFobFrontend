@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
+import { RouterProvider, useRouter } from './context/RouterContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { SundayDeliveryNotice } from './components/SundayDeliveryNotice';
@@ -20,7 +21,7 @@ import type { OrderItem } from './api/orders';
 export const AppContent: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'customizer' | 'track' | 'orders' | 'admin'>('customizer');
+  const { tab: activeTab, navigate } = useRouter();
 
   // Checkout modal state
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -33,11 +34,11 @@ export const AppContent: React.FC = () => {
   // Automatically reset tab when user logs out or permission changes
   React.useEffect(() => {
     if (activeTab === 'admin' && !user?.isAdmin) {
-      setActiveTab('customizer');
+      navigate('customizer', { replace: true });
     } else if (activeTab === 'orders' && !user) {
-      setActiveTab('customizer');
+      navigate('customizer', { replace: true });
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, navigate]);
 
   const handleOrderClick = (config: PlateConfig, price: number) => {
     if (!user) {
@@ -61,11 +62,7 @@ export const AppContent: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <GlobalLoadingBar />
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenAuth={() => setIsAuthOpen(true)}
-      />
+      <Header onOpenAuth={() => setIsAuthOpen(true)} />
 
       <main style={{ flex: 1, maxWidth: '1200px', width: '100%', margin: '0 auto', padding: '0 24px' }}>
         {/* Top Banner: Sunday Delivery Notice */}
@@ -80,8 +77,8 @@ export const AppContent: React.FC = () => {
 
         {activeTab === 'orders' && (
           <MyOrdersPage
-            onGoToCustomizer={() => setActiveTab('customizer')}
-            onGoToTrack={() => setActiveTab('track')}
+            onGoToCustomizer={() => navigate('customizer')}
+            onGoToTrack={(orderNumber) => navigate('track', orderNumber ? { query: { number: orderNumber } } : undefined)}
           />
         )}
 
@@ -111,7 +108,9 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
-          <AppContent />
+          <RouterProvider>
+            <AppContent />
+          </RouterProvider>
         </ToastProvider>
       </AuthProvider>
     </ThemeProvider>

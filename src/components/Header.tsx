@@ -3,26 +3,21 @@ import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X } f
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { useRouter, NavLink } from '../context/RouterContext';
 import { LogoutModal } from './LogoutModal';
 
 interface HeaderProps {
-  activeTab: 'customizer' | 'track' | 'orders' | 'admin';
-  setActiveTab: (tab: 'customizer' | 'track' | 'orders' | 'admin') => void;
   onOpenAuth: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenAuth }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
+  const { tab: activeTab } = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const handleTabClick = (tab: 'customizer' | 'track' | 'orders' | 'admin') => {
-    setActiveTab(tab);
-    setIsMobileMenuOpen(false);
-  };
 
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
@@ -51,10 +46,11 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
       <header className="glass header-container" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '12px 24px', marginBottom: '24px' }}>
       <div className="header-content" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         
-        {/* Brand Logo */}
-        <div
-          onClick={() => handleTabClick('customizer')}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}
+        {/* Brand Logo Link */}
+        <NavLink
+          tab="customizer"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
+          onClick={() => setIsMobileMenuOpen(false)}
         >
           <div
             className="brand-icon"
@@ -80,44 +76,44 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
             </div>
             <div className="brand-subtext" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Кыргызские Гос Номера</div>
           </div>
-        </div>
+        </NavLink>
 
         {/* Desktop Navigation Links */}
-        <nav className="hide-mobile" style={{ alignItems: 'center', gap: '8px' }}>
-          <button
+        <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <NavLink
+            tab="customizer"
             className={`btn ${activeTab === 'customizer' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-            onClick={() => handleTabClick('customizer')}
           >
             Конструктор
-          </button>
+          </NavLink>
 
-          <button
+          <NavLink
+            tab="track"
             className={`btn ${activeTab === 'track' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-            onClick={() => handleTabClick('track')}
           >
             <Search size={15} /> Отследить Заказ
-          </button>
+          </NavLink>
 
           {user && (
-            <button
+            <NavLink
+              tab="orders"
               className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-              onClick={() => handleTabClick('orders')}
             >
               <Package size={15} /> Мои Заказы
-            </button>
+            </NavLink>
           )}
 
           {user?.isAdmin && (
-            <button
+            <NavLink
+              tab="admin"
               className={`btn ${activeTab === 'admin' ? 'btn-gold' : 'btn-secondary'}`}
               style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-              onClick={() => handleTabClick('admin')}
             >
               <ShieldCheck size={15} /> Админ-Панель
-            </button>
+            </NavLink>
           )}
         </nav>
 
@@ -171,36 +167,40 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
       {/* Mobile Menu Drawer Dropdown */}
       {isMobileMenuOpen && (
         <div className="mobile-menu-drawer show-mobile">
-          <button
+          <NavLink
+            tab="customizer"
             className={`btn ${activeTab === 'customizer' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => handleTabClick('customizer')}
+            onClick={() => setIsMobileMenuOpen(false)}
           >
             <Key size={16} /> Конструктор Брелка
-          </button>
+          </NavLink>
 
-          <button
+          <NavLink
+            tab="track"
             className={`btn ${activeTab === 'track' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => handleTabClick('track')}
+            onClick={() => setIsMobileMenuOpen(false)}
           >
             <Search size={16} /> Отследить Заказ
-          </button>
+          </NavLink>
 
           {user && (
-            <button
+            <NavLink
+              tab="orders"
               className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => handleTabClick('orders')}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               <Package size={16} /> Мои Заказы
-            </button>
+            </NavLink>
           )}
 
           {user?.isAdmin && (
-            <button
+            <NavLink
+              tab="admin"
               className={`btn ${activeTab === 'admin' ? 'btn-gold' : 'btn-secondary'}`}
-              onClick={() => handleTabClick('admin')}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               <ShieldCheck size={16} /> Админ-Панель
-            </button>
+            </NavLink>
           )}
 
           {user && (
@@ -230,4 +230,3 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
   </>
 );
 };
-

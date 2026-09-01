@@ -1,23 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Package, Calendar, MapPin, Truck, RefreshCw } from 'lucide-react';
 import { trackOrder, type OrderItem } from '../api/orders';
 import { PlateVisualizer2D } from '../components/PlateVisualizer2D';
 import { useToast } from '../context/ToastContext';
+import { useRouter } from '../context/RouterContext';
 
 export const OrderTrackingPage: React.FC = () => {
   const { showToast } = useToast();
+  const { getPath } = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<OrderItem | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const performSearch = async (num: string) => {
+    const trimmed = num.trim();
+    if (!trimmed) return;
 
     setIsLoading(true);
     try {
-      const res = await trackOrder(searchQuery.trim());
+      const res = await trackOrder(trimmed);
       setOrder(res);
+      // Update URL query without full reload
+      const newUrl = getPath('track', { number: trimmed });
+      window.history.replaceState({}, '', newUrl);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Заказ не найден';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
@@ -25,6 +30,20 @@ export const OrderTrackingPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = params.get('number') || params.get('q');
+    if (initialQuery) {
+      setSearchQuery(initialQuery);
+      performSearch(initialQuery);
+    }
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(searchQuery);
   };
 
   const getStatusBadge = (status: OrderItem['status']) => {
