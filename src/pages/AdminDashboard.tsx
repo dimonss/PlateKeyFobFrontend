@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock, Eye, Box, Trash2 } from 'lucide-react';
+import { ShieldCheck, Package, DollarSign, Clock, Truck, RefreshCw, Printer, Search, Phone, MapPin, Lock, Eye, Box, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { fetchAdminOrders, updateOrderStatusApi, deleteOrderApi, fetchAdminStats, type AdminStats } from '../api/admin';
 import type { OrderItem } from '../api/orders';
 import { useToast } from '../context/ToastContext';
@@ -14,6 +14,12 @@ export const AdminDashboard: React.FC = () => {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [sundayFilter] = useState('');
@@ -35,10 +41,14 @@ export const AdminDashboard: React.FC = () => {
           status: statusFilter,
           sundayDeliveryDate: sundayFilter || undefined,
           search: searchQuery || undefined,
+          page,
+          limit,
         }),
         fetchAdminStats(),
       ]);
-      setOrders(ordersData);
+      setOrders(ordersData.items);
+      setTotalOrders(ordersData.total);
+      setTotalPages(ordersData.totalPages);
       setStats(statsData);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка загрузки админ-панели';
@@ -46,7 +56,7 @@ export const AdminDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, sundayFilter, searchQuery, showToast]);
+  }, [statusFilter, sundayFilter, searchQuery, page, limit, user?.isAdmin, showToast]);
 
   useEffect(() => {
     loadData();
@@ -69,14 +79,18 @@ export const AdminDashboard: React.FC = () => {
     setIsDeletingOrder(true);
     try {
       await deleteOrderApi(orderToDelete.id);
-      setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
       showToast({
         type: 'success',
         title: 'Заказ удален',
         message: `Заказ #${orderToDelete.orderNumber} успешно удален`,
       });
-      fetchAdminStats().then(setStats);
       setOrderToDelete(null);
+      fetchAdminStats().then(setStats);
+      if (orders.length === 1 && page > 1) {
+        setPage(p => p - 1);
+      } else {
+        loadData();
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка при удалении заказа';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
@@ -192,7 +206,10 @@ export const AdminDashboard: React.FC = () => {
             className="input-field"
             style={{ width: 'auto', minWidth: '150px' }}
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={e => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="all">Все статусы</option>
             <option value="pending">Ожидает</option>
@@ -209,7 +226,10 @@ export const AdminDashboard: React.FC = () => {
               className="input-field"
               placeholder="Поиск по гос номеру, имени или телефону..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
             />
             <Search size={16} style={{ position: 'absolute', right: '14px', top: '14px', color: 'var(--text-dim)' }} />
           </div>
@@ -483,6 +503,135 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalOrders > 0 && (
+        <div
+          className="glass-elevated"
+          style={{
+            marginTop: '20px',
+            padding: '14px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
+          {/* Left: Summary and Limit Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Показано <strong>{(page - 1) * limit + 1}–{Math.min(page * limit, totalOrders)}</strong> из <strong>{totalOrders}</strong> заказов
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>На странице:</span>
+              <select
+                className="input-field"
+                style={{ padding: '4px 10px', fontSize: '0.82rem', width: 'auto', minWidth: '70px' }}
+                value={limit}
+                onChange={e => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Right: Page Navigation */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: page <= 1 ? 0.5 : 1 }}
+              onClick={() => setPage(1)}
+              disabled={page <= 1}
+              title="Первая страница"
+            >
+              <ChevronsLeft size={16} />
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', opacity: page <= 1 ? 0.5 : 1 }}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              title="Предыдущая страница"
+            >
+              <ChevronLeft size={16} />
+              <span className="hide-mobile">Назад</span>
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {(() => {
+                const delta = 1;
+                const range: (number | string)[] = [];
+                for (let i = 1; i <= totalPages; i++) {
+                  if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+                    range.push(i);
+                  } else if (range[range.length - 1] !== '...') {
+                    range.push('...');
+                  }
+                }
+                return range.map((pNum, idx) => {
+                  if (pNum === '...') {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        style={{ padding: '0 6px', color: 'var(--text-dim)', userSelect: 'none' }}
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = pNum === page;
+                  return (
+                    <button
+                      key={`page-${pNum}`}
+                      className={`btn ${isCurrent ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{
+                        minWidth: '34px',
+                        height: '34px',
+                        padding: '0 8px',
+                        fontSize: '0.82rem',
+                        fontWeight: isCurrent ? 700 : 500,
+                      }}
+                      onClick={() => setPage(pNum as number)}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', opacity: page >= totalPages ? 0.5 : 1 }}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              title="Следующая страница"
+            >
+              <span className="hide-mobile">Вперед</span>
+              <ChevronRight size={16} />
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ padding: '6px 10px', fontSize: '0.8rem', opacity: page >= totalPages ? 0.5 : 1 }}
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              title="Последняя страница"
+            >
+              <ChevronsRight size={16} />
+            </button>
           </div>
         </div>
       )}

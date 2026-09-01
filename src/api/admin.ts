@@ -11,18 +11,30 @@ export interface AdminStats {
   sundayBatches: Record<string, number>;
 }
 
+export interface PaginatedOrdersResponse {
+  items: OrderItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export async function fetchAdminOrders(filters?: {
   status?: string;
   sundayDeliveryDate?: string;
   search?: string;
-}): Promise<OrderItem[]> {
+  page?: number;
+  limit?: number;
+}): Promise<PaginatedOrdersResponse> {
   const query = new URLSearchParams();
   if (filters?.status && filters.status !== 'all') query.append('status', filters.status);
   if (filters?.sundayDeliveryDate) query.append('sundayDeliveryDate', filters.sundayDeliveryDate);
   if (filters?.search) query.append('search', filters.search);
+  if (filters?.page) query.append('page', filters.page.toString());
+  if (filters?.limit) query.append('limit', filters.limit.toString());
 
   const url = `/admin/orders${query.toString() ? `?${query.toString()}` : ''}`;
-  return apiRequest<OrderItem[]>(url);
+  return apiRequest<PaginatedOrdersResponse>(url);
 }
 
 export async function updateOrderStatusApi(
