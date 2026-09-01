@@ -20,7 +20,7 @@ import type { PlateConfig } from './components/PlateVisualizer2D';
 import type { OrderItem } from './api/orders';
 
 export const AppContent: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
   const { tab: activeTab, navigate } = useRouter();
 
@@ -32,14 +32,16 @@ export const AppContent: React.FC = () => {
   // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Automatically reset tab when user logs out or permission changes
+  // Automatically reset tab when user logs out or permission changes (only after auth state is loaded)
   React.useEffect(() => {
+    if (isAuthLoading) return;
+
     if (activeTab === 'admin' && !user?.isAdmin) {
       navigate('customizer', { replace: true });
     } else if (activeTab === 'orders' && !user) {
       navigate('customizer', { replace: true });
     }
-  }, [user, activeTab, navigate]);
+  }, [user, isAuthLoading, activeTab, navigate]);
 
   const handleOrderClick = (config: PlateConfig, price: number) => {
     if (!user) {
@@ -70,21 +72,32 @@ export const AppContent: React.FC = () => {
         <SundayDeliveryNotice />
 
         <ErrorBoundary fallbackTitle="Ошибка отображения страницы">
-          {/* Tab Routing */}
-          {activeTab === 'customizer' && (
-            <KeychainCustomizer onOrderClick={handleOrderClick} />
+          {isAuthLoading && (activeTab === 'admin' || activeTab === 'orders') ? (
+            <div className="glass-elevated" style={{ padding: '60px 24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto', borderRadius: '16px' }}>
+              <div className="loading-spinner-ring" style={{ margin: '0 auto 16px' }} />
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                Проверка авторизации...
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Tab Routing */}
+              {activeTab === 'customizer' && (
+                <KeychainCustomizer onOrderClick={handleOrderClick} />
+              )}
+
+              {activeTab === 'track' && <OrderTrackingPage />}
+
+              {activeTab === 'orders' && (
+                <MyOrdersPage
+                  onGoToCustomizer={() => navigate('customizer')}
+                  onGoToTrack={(orderNumber) => navigate('track', orderNumber ? { query: { number: orderNumber } } : undefined)}
+                />
+              )}
+
+              {activeTab === 'admin' && <AdminDashboard />}
+            </>
           )}
-
-          {activeTab === 'track' && <OrderTrackingPage />}
-
-          {activeTab === 'orders' && (
-            <MyOrdersPage
-              onGoToCustomizer={() => navigate('customizer')}
-              onGoToTrack={(orderNumber) => navigate('track', orderNumber ? { query: { number: orderNumber } } : undefined)}
-            />
-          )}
-
-          {activeTab === 'admin' && <AdminDashboard />}
         </ErrorBoundary>
       </main>
 

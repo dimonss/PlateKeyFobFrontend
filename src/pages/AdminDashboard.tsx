@@ -9,7 +9,7 @@ import { PlateVisualizer3D } from '../components/PlateVisualizer3D';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 
 export const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -134,6 +134,17 @@ export const AdminDashboard: React.FC = () => {
       return dateString;
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="glass-elevated" style={{ padding: '48px 24px', textAlign: 'center', maxWidth: '500px', margin: '40px auto', borderRadius: '16px' }}>
+        <div className="loading-spinner-ring" style={{ margin: '0 auto 16px' }} />
+        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+          Проверка прав доступа...
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !user.isAdmin) {
     return (
