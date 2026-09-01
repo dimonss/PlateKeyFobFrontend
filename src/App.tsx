@@ -13,6 +13,7 @@ import { MyOrdersPage } from './pages/MyOrdersPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
 import { GlobalLoadingBar } from './components/GlobalLoadingBar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import type { PlateConfig } from './components/PlateVisualizer2D';
@@ -68,21 +69,23 @@ export const AppContent: React.FC = () => {
         {/* Top Banner: Sunday Delivery Notice */}
         <SundayDeliveryNotice />
 
-        {/* Tab Routing */}
-        {activeTab === 'customizer' && (
-          <KeychainCustomizer onOrderClick={handleOrderClick} />
-        )}
+        <ErrorBoundary fallbackTitle="Ошибка отображения страницы">
+          {/* Tab Routing */}
+          {activeTab === 'customizer' && (
+            <KeychainCustomizer onOrderClick={handleOrderClick} />
+          )}
 
-        {activeTab === 'track' && <OrderTrackingPage />}
+          {activeTab === 'track' && <OrderTrackingPage />}
 
-        {activeTab === 'orders' && (
-          <MyOrdersPage
-            onGoToCustomizer={() => navigate('customizer')}
-            onGoToTrack={(orderNumber) => navigate('track', orderNumber ? { query: { number: orderNumber } } : undefined)}
-          />
-        )}
+          {activeTab === 'orders' && (
+            <MyOrdersPage
+              onGoToCustomizer={() => navigate('customizer')}
+              onGoToTrack={(orderNumber) => navigate('track', orderNumber ? { query: { number: orderNumber } } : undefined)}
+            />
+          )}
 
-        {activeTab === 'admin' && <AdminDashboard />}
+          {activeTab === 'admin' && <AdminDashboard />}
+        </ErrorBoundary>
       </main>
 
       <Footer />

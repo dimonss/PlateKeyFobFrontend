@@ -29,18 +29,18 @@ const REGION_NAMES: Record<string, string> = {
  * e.g. "5555 M" -> { digits: "5555", letters: "M" }
  * e.g. "777 AAA" -> { digits: "777", letters: "AAA" }
  */
-export function parsePlateText(text: string) {
+export function parsePlateText(text?: string | null) {
   const trimmed = (text || '5555 M').trim().toUpperCase();
   const match = trimmed.match(/^([0-9]{1,4})\s*([A-ZА-Я]{1,3})$/i);
   if (match) {
     return {
-      digits: match[1],
-      letters: match[2],
+      digits: match[1] || '',
+      letters: match[2] || '',
       isStandard: true,
     };
   }
   return {
-    digits: trimmed,
+    digits: trimmed || '',
     letters: '',
     isStandard: false,
   };

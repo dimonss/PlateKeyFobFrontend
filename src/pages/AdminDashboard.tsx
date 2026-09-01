@@ -46,10 +46,21 @@ export const AdminDashboard: React.FC = () => {
         }),
         fetchAdminStats(),
       ]);
-      setOrders(ordersData.items);
-      setTotalOrders(ordersData.total);
-      setTotalPages(ordersData.totalPages);
-      setStats(statsData);
+
+      const items: OrderItem[] = Array.isArray(ordersData)
+        ? ordersData
+        : (Array.isArray(ordersData?.items) ? ordersData.items : []);
+      const total = Array.isArray(ordersData)
+        ? ordersData.length
+        : (typeof ordersData?.total === 'number' ? ordersData.total : items.length);
+      const pages = Array.isArray(ordersData)
+        ? Math.max(1, Math.ceil(items.length / limit))
+        : (typeof ordersData?.totalPages === 'number' ? ordersData.totalPages : 1);
+
+      setOrders(items);
+      setTotalOrders(total);
+      setTotalPages(pages);
+      setStats(statsData || null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка загрузки админ-панели';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
@@ -68,7 +79,7 @@ export const AdminDashboard: React.FC = () => {
     setUpdatingOrderId(orderId);
     try {
       const updated = await updateOrderStatusApi(orderId, newStatus);
-      setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
+      setOrders(prev => (Array.isArray(prev) ? prev.map(o => (o.id === orderId ? updated : o)) : []));
       showToast({ type: 'success', title: 'Статус обновлен', message: `Новый статус: ${newStatus}` });
       fetchAdminStats().then(setStats);
     } catch (err: unknown) {
@@ -91,7 +102,8 @@ export const AdminDashboard: React.FC = () => {
       });
       setOrderToDelete(null);
       fetchAdminStats().then(setStats);
-      if (orders.length === 1 && page > 1) {
+      const currentOrders = Array.isArray(orders) ? orders : [];
+      if (currentOrders.length === 1 && page > 1) {
         setPage(p => p - 1);
       } else {
         loadData();
@@ -135,6 +147,8 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       
@@ -167,7 +181,7 @@ export const AdminDashboard: React.FC = () => {
               <span>Всего заказов</span>
               <Package size={18} color="var(--primary)" />
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px' }}>{stats.totalOrders}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px' }}>{stats.totalOrders ?? 0}</div>
           </div>
 
           <div className="glass-elevated" style={{ padding: '16px', borderLeft: '4px solid #10b981' }}>
@@ -176,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
               <DollarSign size={18} color="#10b981" />
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#10b981' }}>
-              {stats.totalRevenue} <span style={{ fontSize: '0.85rem' }}>сом</span>
+              {stats.totalRevenue ?? 0} <span style={{ fontSize: '0.85rem' }}>сом</span>
             </div>
           </div>
 
@@ -186,7 +200,7 @@ export const AdminDashboard: React.FC = () => {
               <Clock size={18} color="#f59e0b" />
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#f59e0b' }}>
-              {stats.inProductionCount + stats.pendingCount}
+              {(stats.inProductionCount || 0) + (stats.pendingCount || 0)}
             </div>
           </div>
 
@@ -196,7 +210,7 @@ export const AdminDashboard: React.FC = () => {
               <Truck size={18} color="#a855f7" />
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '6px', color: '#c084fc' }}>
-              {stats.readyForSundayCount}
+              {stats.readyForSundayCount ?? 0}
             </div>
           </div>
         </div>
@@ -273,12 +287,12 @@ export const AdminDashboard: React.FC = () => {
 
         {viewType === 'cards' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {orders.length === 0 ? (
+            {safeOrders.length === 0 ? (
               <div className="glass-elevated" style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 Заказы не найдены.
               </div>
             ) : (
-              orders.map(order => (
+              safeOrders.map(order => (
                 <div key={order.id} className="glass-elevated" style={{ padding: '24px', borderRadius: '16px' }}>
                 {/* Order Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
@@ -322,17 +336,17 @@ export const AdminDashboard: React.FC = () => {
 
                 {/* Grid Content */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  {/* Plate Preview - Identical to My Orders */}
+                  {/* Plate Preview */}
                   <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Макет брелка:</span>
                     <PlateVisualizer2D
                       config={{
-                        plateNumber: order.plateNumber,
-                        regionCode: order.regionCode,
-                        plateType: order.plateType as any,
+                        plateNumber: order.plateNumber || '',
+                        regionCode: order.regionCode || '01',
+                        plateType: (order.plateType as any) || 'standard',
                         backSideText: order.backSideText || '',
                         backSideLogo: order.backSideLogo || 'none',
-                        material: order.material as any,
+                        material: (order.material as any) || 'plastic',
                       }}
                     />
                   </div>
@@ -418,14 +432,14 @@ export const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.length === 0 ? (
+                {safeOrders.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
                       Заказы не найдены.
                     </td>
                   </tr>
                 ) : (
-                  orders.map(order => (
+                  safeOrders.map(order => (
                     <tr key={order.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
                       
                       <td style={{ padding: '14px 18px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
@@ -436,12 +450,12 @@ export const AdminDashboard: React.FC = () => {
                         <div style={{ width: '170px' }}>
                           <SVGPlate2D
                             config={{
-                              plateNumber: order.plateNumber,
-                              regionCode: order.regionCode,
-                              plateType: order.plateType as any,
+                              plateNumber: order.plateNumber || '',
+                              regionCode: order.regionCode || '01',
+                              plateType: (order.plateType as any) || 'standard',
                               backSideText: order.backSideText || '',
                               backSideLogo: order.backSideLogo || 'none',
-                              material: order.material as any,
+                              material: (order.material as any) || 'plastic',
                             }}
                           />
                         </div>
@@ -526,7 +540,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Pagination Controls */}
-      {totalOrders > 0 && (
+      {totalOrders > 0 && totalPages > 0 && (
         <div
           className="glass-elevated"
           style={{
@@ -594,7 +608,7 @@ export const AdminDashboard: React.FC = () => {
                 for (let i = 1; i <= totalPages; i++) {
                   if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
                     range.push(i);
-                  } else if (range[range.length - 1] !== '...') {
+                  } else if (range.length > 0 && range[range.length - 1] !== '...') {
                     range.push('...');
                   }
                 }
@@ -704,11 +718,11 @@ export const AdminDashboard: React.FC = () => {
             >
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block' }}>Гос Номер:</span>
-                <strong>{selectedOrderForModal.regionCode} {selectedOrderForModal.plateNumber}</strong>
+                <strong>{selectedOrderForModal.regionCode || '01'} {selectedOrderForModal.plateNumber}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block' }}>Материал:</span>
-                <strong style={{ textTransform: 'capitalize' }}>{selectedOrderForModal.material.replace('_', ' ')}</strong>
+                <strong style={{ textTransform: 'capitalize' }}>{(selectedOrderForModal.material || 'plastic').replace('_', ' ')}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block' }}>Оборотный Текст:</span>
@@ -724,12 +738,12 @@ export const AdminDashboard: React.FC = () => {
             {modalViewMode === '3d' ? (
               <PlateVisualizer3D
                 config={{
-                  plateNumber: selectedOrderForModal.plateNumber,
-                  regionCode: selectedOrderForModal.regionCode,
-                  plateType: selectedOrderForModal.plateType as any,
+                  plateNumber: selectedOrderForModal.plateNumber || '',
+                  regionCode: selectedOrderForModal.regionCode || '01',
+                  plateType: (selectedOrderForModal.plateType as any) || 'standard',
                   backSideText: selectedOrderForModal.backSideText || '',
                   backSideLogo: selectedOrderForModal.backSideLogo || 'none',
-                  material: selectedOrderForModal.material as any,
+                  material: (selectedOrderForModal.material as any) || 'plastic',
                 }}
                 showExportControls={true}
                 orderNumber={selectedOrderForModal.orderNumber}
@@ -737,12 +751,12 @@ export const AdminDashboard: React.FC = () => {
             ) : (
               <PlateVisualizer2D
                 config={{
-                  plateNumber: selectedOrderForModal.plateNumber,
-                  regionCode: selectedOrderForModal.regionCode,
-                  plateType: selectedOrderForModal.plateType as any,
+                  plateNumber: selectedOrderForModal.plateNumber || '',
+                  regionCode: selectedOrderForModal.regionCode || '01',
+                  plateType: (selectedOrderForModal.plateType as any) || 'standard',
                   backSideText: selectedOrderForModal.backSideText || '',
                   backSideLogo: selectedOrderForModal.backSideLogo || 'none',
-                  material: selectedOrderForModal.material as any,
+                  material: (selectedOrderForModal.material as any) || 'plastic',
                 }}
               />
             )}
