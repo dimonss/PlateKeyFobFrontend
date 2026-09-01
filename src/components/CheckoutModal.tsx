@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { X, CheckCircle, Calendar, Truck, CreditCard } from 'lucide-react';
+import { X, CheckCircle, Calendar, Truck, CreditCard, RefreshCw } from 'lucide-react';
 import type { PlateConfig } from './PlateVisualizer2D';
 import { createOrder, type OrderItem } from '../api/orders';
 import { getNextSunday, formatSundayText } from './SundayDeliveryNotice';
@@ -360,9 +360,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               type="submit"
               disabled={isSubmitting}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: '16px' }}
+              style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              {isSubmitting ? 'Оформление...' : `Подтвердить Заказ (${price} сом)`}
+              {isSubmitting ? (
+                <>
+                  <RefreshCw size={18} className="spin" />
+                  <span>Оформление заказа...</span>
+                </>
+              ) : (
+                `Подтвердить Заказ (${price} сом)`
+              )}
             </button>
           </form>
         )}

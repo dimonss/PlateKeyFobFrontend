@@ -62,7 +62,10 @@ export const AdminDashboard: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+
   const handleStatusChange = async (orderId: string, newStatus: OrderItem['status']) => {
+    setUpdatingOrderId(orderId);
     try {
       const updated = await updateOrderStatusApi(orderId, newStatus);
       setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
@@ -71,6 +74,8 @@ export const AdminDashboard: React.FC = () => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Ошибка обновления';
       showToast({ type: 'error', title: 'Ошибка', message: msg });
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -256,15 +261,25 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Orders List View */}
-      {viewType === 'cards' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {orders.length === 0 ? (
-            <div className="glass-elevated" style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              Заказы не найдены.
-            </div>
-          ) : (
-            orders.map(order => (
-              <div key={order.id} className="glass-elevated" style={{ padding: '24px', borderRadius: '16px' }}>
+      <div className="content-loading-container">
+        {isLoading && (
+          <div className="content-loading-overlay">
+            <div className="loading-spinner-ring" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              Загрузка заказов...
+            </span>
+          </div>
+        )}
+
+        {viewType === 'cards' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {orders.length === 0 ? (
+              <div className="glass-elevated" style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Заказы не найдены.
+              </div>
+            ) : (
+              orders.map(order => (
+                <div key={order.id} className="glass-elevated" style={{ padding: '24px', borderRadius: '16px' }}>
                 {/* Order Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
@@ -283,8 +298,9 @@ export const AdminDashboard: React.FC = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Статус заказа:</span>
                       <select
                         className="input-field"
-                        style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+                        style={{ padding: '6px 12px', fontSize: '0.82rem', opacity: updatingOrderId === order.id ? 0.6 : 1 }}
                         value={order.status}
+                        disabled={updatingOrderId === order.id}
                         onChange={e => handleStatusChange(order.id, e.target.value as any)}
                       >
                         <option value="pending">Ожидает</option>
@@ -459,8 +475,9 @@ export const AdminDashboard: React.FC = () => {
                       <td style={{ padding: '14px 18px' }}>
                         <select
                           className="input-field"
-                          style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                          style={{ padding: '4px 8px', fontSize: '0.78rem', opacity: updatingOrderId === order.id ? 0.6 : 1 }}
                           value={order.status}
+                          disabled={updatingOrderId === order.id}
                           onChange={e => handleStatusChange(order.id, e.target.value as any)}
                         >
                           <option value="pending">Ожидает</option>
@@ -506,6 +523,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
 
       {/* Pagination Controls */}
       {totalOrders > 0 && (

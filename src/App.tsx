@@ -11,6 +11,7 @@ import { OrderTrackingPage } from './pages/OrderTrackingPage';
 import { MyOrdersPage } from './pages/MyOrdersPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
+import { GlobalLoadingBar } from './components/GlobalLoadingBar';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import type { PlateConfig } from './components/PlateVisualizer2D';
@@ -59,6 +60,7 @@ export const AppContent: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <GlobalLoadingBar />
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}

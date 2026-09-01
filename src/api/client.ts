@@ -22,6 +22,45 @@ let refreshPromise: Promise<boolean> | null = null;
 type UnauthorizedHandler = () => void;
 let onUnauthorizedCallback: UnauthorizedHandler | null = null;
 
+// Global loading listeners
+type LoadingListener = (isLoading: boolean, activeRequests: number) => void;
+const loadingListeners = new Set<LoadingListener>();
+let activeRequestsCount = 0;
+
+export function addLoadingListener(listener: LoadingListener) {
+  loadingListeners.add(listener);
+  // Emit current state immediately
+  listener(activeRequestsCount > 0, activeRequestsCount);
+  return () => {
+    loadingListeners.delete(listener);
+  };
+}
+
+export function removeLoadingListener(listener: LoadingListener) {
+  loadingListeners.delete(listener);
+}
+
+function notifyLoadingListeners() {
+  const isLoading = activeRequestsCount > 0;
+  loadingListeners.forEach(listener => {
+    try {
+      listener(isLoading, activeRequestsCount);
+    } catch {
+      // Ignore listener errors
+    }
+  });
+}
+
+function startRequest() {
+  activeRequestsCount++;
+  notifyLoadingListeners();
+}
+
+function endRequest() {
+  activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+  notifyLoadingListeners();
+}
+
 export function setOnUnauthorized(callback: UnauthorizedHandler | null) {
   onUnauthorizedCallback = callback;
 }
@@ -85,51 +124,56 @@ export async function apiRequest<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  let response: Response | undefined;
-
+  startRequest();
   try {
-    response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
-  } catch (err) {
-    throw new Error('Ошибка сети. Проверьте подключение к интернету.');
-  }
+    let response: Response | undefined;
 
-  if (response.status === 401) {
-    const { refreshToken } = getTokens();
-    if (refreshToken) {
-      const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        const newTokens = getTokens();
-        headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
-        try {
-          response = await fetch(`${API_BASE}${path}`, {
-            ...options,
-            headers,
-          });
-        } catch {
-          throw new Error('Ошибка сети после обновления авторизации.');
-        }
-      }
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+    } catch {
+      throw new Error('Ошибка сети. Проверьте подключение к интернету.');
     }
 
     if (response.status === 401) {
-      handleUnauthorized();
+      const { refreshToken } = getTokens();
+      if (refreshToken) {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          const newTokens = getTokens();
+          headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
+          try {
+            response = await fetch(`${API_BASE}${path}`, {
+              ...options,
+              headers,
+            });
+          } catch {
+            throw new Error('Ошибка сети после обновления авторизации.');
+          }
+        }
+      }
+
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
     }
-  }
 
-  if (response.ok) {
-    return response.json() as Promise<T>;
-  }
+    if (response.ok) {
+      return (await response.json()) as T;
+    }
 
-  let errorMessage = `Ошибка ${response.status}`;
-  try {
-    const errData = (await response.json()) as { message?: string };
-    if (errData.message) errorMessage = errData.message;
-  } catch {
-    // fallback message
-  }
+    let errorMessage = `Ошибка ${response.status}`;
+    try {
+      const errData = (await response.json()) as { message?: string };
+      if (errData.message) errorMessage = errData.message;
+    } catch {
+      // fallback message
+    }
 
-  throw new Error(errorMessage);
+    throw new Error(errorMessage);
+  } finally {
+    endRequest();
+  }
 }

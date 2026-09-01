@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Package, Calendar, MapPin, Truck } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, Truck, RefreshCw } from 'lucide-react';
 import { trackOrder, type OrderItem } from '../api/orders';
 import { PlateVisualizer2D } from '../components/PlateVisualizer2D';
 import { useToast } from '../context/ToastContext';
@@ -66,10 +66,30 @@ export const OrderTrackingPage: React.FC = () => {
             style={{ fontSize: '1rem', flex: 1, minWidth: '200px' }}
           />
           <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ whiteSpace: 'nowrap', minHeight: '44px' }}>
-            {isLoading ? 'Поиск...' : 'Найти Заказ'}
+            {isLoading ? (
+              <>
+                <RefreshCw size={16} className="spin" />
+                <span>Поиск...</span>
+              </>
+            ) : (
+              <>
+                <Search size={16} />
+                <span>Найти Заказ</span>
+              </>
+            )}
           </button>
         </form>
       </div>
+
+      {/* Loading state during search */}
+      {isLoading && (
+        <div className="glass-elevated" style={{ padding: '36px', textAlign: 'center', borderRadius: '16px' }}>
+          <div className="loading-spinner-ring" style={{ margin: '0 auto 16px' }} />
+          <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+            Ищем информацию по заказу {searchQuery}...
+          </div>
+        </div>
+      )}
 
       {/* Order Details View */}
       {order && (
