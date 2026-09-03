@@ -21,7 +21,7 @@ const REGIONS = [
 ];
 
 const MATERIALS = [
-  { id: 'plastic', name: 'Пластик', price: 400, color: '#e2e8f0' },
+  { id: 'plastic', name: 'Пластик', price: 300, color: '#e2e8f0' },
   { id: 'black_matte', name: 'Матовый Магнит', price: 500, color: '#111827' },
   { id: 'gold_edge', name: 'Золотая Кайма', price: 600, color: '#f59e0b' },
   { id: 'carbon', name: 'Карбоновый Микс', price: 600, color: '#374151' },
@@ -54,7 +54,7 @@ export const KeychainCustomizer: React.FC<KeychainCustomizerProps> = ({ onOrderC
 
   // Calculate dynamic price
   const calculatePrice = () => {
-    let price = 400;
+    let price = 300;
     const selectedMat = MATERIALS.find(m => m.id === config.material);
     if (selectedMat) price = selectedMat.price;
 

@@ -27,7 +27,7 @@ export const AppContent: React.FC = () => {
   // Checkout modal state
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutConfig, setCheckoutConfig] = useState<PlateConfig | null>(null);
-  const [checkoutPrice, setCheckoutPrice] = useState(400);
+  const [checkoutPrice, setCheckoutPrice] = useState(300);
 
   // Auth modal state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
