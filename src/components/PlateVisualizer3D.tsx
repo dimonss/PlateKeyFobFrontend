@@ -1463,15 +1463,15 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
             const v1 = indexAttr.getX(i);
             const v2 = indexAttr.getX(i + 1);
             const v3 = indexAttr.getX(i + 2);
-            trianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" />\n`;
+            trianglesXml += `        <triangle v1="${v1}" v2="${v2}" v3="${v3}" pid="1" p1="${part.colorIndex}" />\n`;
           }
         } else {
           for (let i = 0; i < posAttr.count; i += 3) {
-            trianglesXml += `        <triangle v1="${i}" v2="${i + 1}" v3="${i + 2}" />\n`;
+            trianglesXml += `        <triangle v1="${i}" v2="${i + 1}" v3="${i + 2}" pid="1" p1="${part.colorIndex}" />\n`;
           }
         }
 
-        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}">
+        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}" pid="1" p1="${part.colorIndex}">
       <mesh>
         <vertices>
 ${verticesXml}        </vertices>
