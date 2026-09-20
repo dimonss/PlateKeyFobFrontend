@@ -530,8 +530,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         roughness,
       });
 
-      let frontBackMetalness = 0.3;
-      let frontBackRoughness = 0.2;
+      let frontBackMetalness: number;
+      let frontBackRoughness: number;
       
       if (config.material === 'gold_edge') {
         frontBackMetalness = 0.6;
@@ -1216,13 +1216,12 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
       }
 
-      // Front relief:
-      // - Black text & border (cIdx = 1): Inlaid 0.2mm (1 layer) into base (Z = 1.8...2.0mm) + raised 0.4mm (Z = 2.0...2.4mm)
-      // - Flag Red (cIdx = 2) & Yellow (cIdx = 3): Only the top 2 raised layers (Z = 2.0...2.4mm), preventing unnecessary filament changes on layer 10
+      // Front relief: Flush with top of base plate (z = 2.0mm) and raised 0.4mm (z = 2.0...2.4mm, exactly the last 2 layers at 0.2mm)
+      // All colors (Black, Red, Yellow) start strictly at baseThickness (2.0mm), keeping layers 2..10 (0.2mm to 2.0mm) 100% pure white
       buildWatertightRelief(
         grid,
         false,
-        (cIdx) => (cIdx === 1 ? baseThickness - 0.2 : baseThickness),
+        baseThickness,
         baseThickness + 0.4
       );
     }
@@ -1439,6 +1438,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       let modelSettingsPartsXml = '';
       let nextObjectId = 2;
 
+      const meta = (key: string, value: string | number) => `<metadata key="${key}" value="${value}"/>`;
+
       for (const part of parts) {
         const objectId = nextObjectId++;
         const geometry = part.mesh.geometry.clone();
@@ -1471,7 +1472,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           }
         }
 
-        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}" pid="1" p1="${part.colorIndex}">
+        objectsXml += `    <object id="${objectId}" type="model" name="${part.name}">
       <mesh>
         <vertices>
 ${verticesXml}        </vertices>
@@ -1482,8 +1483,8 @@ ${trianglesXml}        </triangles>
 
         componentsXml += `      <component objectid="${objectId}" />\n`;
         modelSettingsPartsXml += `    <part id="${objectId}" subtype="normal_part">
-      <metadata key="name" value="${part.name}"/>
-      <metadata key="extruder" value="${part.colorIndex + 1}"/>
+      ${meta('name', part.name)}
+      ${meta('extruder', part.colorIndex + 1)}
     </part>\n`;
       }
 
@@ -1526,14 +1527,14 @@ ${cutterTrianglesXml}        </triangles>
 
       componentsXml += `      <component objectid="${cutterObjectId}" />\n`;
       modelSettingsPartsXml += `    <part id="${cutterObjectId}" subtype="negative_part">
-      <metadata key="name" value="Keyring_Hole_Cutter"/>
-      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
-      <metadata key="source_file" value="Keyring_Hole_Cutter.stl"/>
-      <metadata key="source_object_id" value="0"/>
-      <metadata key="source_volume_id" value="0"/>
-      <metadata key="source_offset_x" value="0"/>
-      <metadata key="source_offset_y" value="0"/>
-      <metadata key="source_offset_z" value="0"/>
+      ${meta('name', 'Keyring_Hole_Cutter')}
+      ${meta('matrix', '1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1')}
+      ${meta('source_file', 'Keyring_Hole_Cutter.stl')}
+      ${meta('source_object_id', '0')}
+      ${meta('source_volume_id', '0')}
+      ${meta('source_offset_x', '0')}
+      ${meta('source_offset_y', '0')}
+      ${meta('source_offset_z', '0')}
     </part>\n`;
 
       const modelXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1562,16 +1563,16 @@ ${componentsXml}      </components>
       const modelSettingsXml = `<?xml version="1.0" encoding="UTF-8"?>
 <config>
   <object id="1">
-    <metadata key="name" value="${getBaseFileName()}"/>
+    ${meta('name', getBaseFileName())}
 ${modelSettingsPartsXml}  </object>
   <plate>
-    <metadata key="plater_id" value="1"/>
-    <metadata key="plater_name" value=""/>
-    <metadata key="locked" value="false"/>
+    ${meta('plater_id', '1')}
+    ${meta('plater_name', '')}
+    ${meta('locked', 'false')}
     <model_instance>
-      <metadata key="object_id" value="1"/>
-      <metadata key="instance_id" value="0"/>
-      <metadata key="identify_id" value="1"/>
+      ${meta('object_id', '1')}
+      ${meta('instance_id', '0')}
+      ${meta('identify_id', '1')}
     </model_instance>
   </plate>
 </config>`;
