@@ -1588,6 +1588,11 @@ ${modelSettingsPartsXml}  </object>
         infill_wall_overlap: '25%',
         minimum_sparse_infill_area: '0',
         top_surface_pattern: 'monotonicline',
+        flush_into_infill: '0',
+        flush_into_objects: '0',
+        flush_into_support: '0',
+        wipe_into_infill: '0',
+        wipe_into_objects: '0',
         filament_settings_id: [
           'Generic PETG',
           'Generic PETG',
