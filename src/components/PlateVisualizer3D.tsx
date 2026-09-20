@@ -921,7 +921,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
     baseMesh.name = 'BasePlate_Color_0';
     printableGroup.add(baseMesh);
 
-    const positionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
+    const frontPositionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
+    const backPositionsByColor: Record<number, number[]> = { 1: [], 2: [], 3: [] };
     const sampleW = 1060;
     const sampleH = 244;
     const cellW = width / sampleW;
@@ -929,6 +930,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
     // Helper to generate 100% watertight, closed 2-manifold solid mesh with merged horizontal quads
     const buildWatertightRelief = (
+      targetPositions: Record<number, number[]>,
       grid: number[][],
       isBack: boolean,
       cz1OrFn: number | ((cIdx: number) => number),
@@ -937,7 +939,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       for (const cIdx of [1, 2, 3]) {
         const cz1 = typeof cz1OrFn === 'function' ? cz1OrFn(cIdx) : cz1OrFn;
         const cz2 = cz2Default;
-        const targetArr = positionsByColor[cIdx];
+        const targetArr = targetPositions[cIdx];
 
         // 1. Top Face (+Z normal) and 2. Bottom Face (-Z normal) with Horizontal Run-Length Merging
         for (let gy = 0; gy < sampleH; gy++) {
@@ -1219,6 +1221,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       // Front relief: Flush with top of base plate (z = 2.0mm) and raised 0.4mm (z = 2.0...2.4mm, exactly the last 2 layers at 0.2mm)
       // All colors (Black, Red, Yellow) start strictly at baseThickness (2.0mm), keeping layers 2..10 (0.2mm to 2.0mm) 100% pure white
       buildWatertightRelief(
+        frontPositionsByColor,
         grid,
         false,
         baseThickness,
@@ -1345,7 +1348,7 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
         }
 
         // Back relief: Flush with build plate (z = 0.0mm) and inlaid 0.2mm (1 layer at 0.2mm layer height) into base plate
-        buildWatertightRelief(gridBack, true, 0.0, 0.2);
+        buildWatertightRelief(backPositionsByColor, gridBack, true, 0.0, 0.2);
       }
     }
 
@@ -1355,7 +1358,8 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
       3: 0xf59e0b, // Flag Yellow / Gold
     };
 
-    for (const [cIdxStr, posArray] of Object.entries(positionsByColor)) {
+    // 1. Back relief meshes (strictly 1st layer: Z = 0.0 to 0.2mm)
+    for (const [cIdxStr, posArray] of Object.entries(backPositionsByColor)) {
       const cIdx = Number(cIdxStr);
       if (posArray.length > 0) {
         const rawGeo = new THREE.BufferGeometry();
@@ -1365,7 +1369,23 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
 
         const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.name = `Relief_Color_${cIdx}`;
+        mesh.name = `Back_Relief_Color_${cIdx}`;
+        printableGroup.add(mesh);
+      }
+    }
+
+    // 2. Front relief meshes (strictly last 2 layers: Z = 2.0 to 2.4mm)
+    for (const [cIdxStr, posArray] of Object.entries(frontPositionsByColor)) {
+      const cIdx = Number(cIdxStr);
+      if (posArray.length > 0) {
+        const rawGeo = new THREE.BufferGeometry();
+        rawGeo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+        const geo = BufferGeometryUtils.mergeVertices(rawGeo, 1e-4);
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({ color: colorMaterials[cIdx], roughness: 0.3 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.name = `Front_Relief_Color_${cIdx}`;
         printableGroup.add(mesh);
       }
     }
@@ -1423,11 +1443,17 @@ export const PlateVisualizer3D: React.FC<PlateVisualizer3DProps> = ({
           const mesh = child as THREE.Mesh;
           if (mesh.name === 'BasePlate_Color_0') {
             parts.push({ name: 'Base_Plate', colorIndex: 0, mesh });
-          } else if (mesh.name === 'Relief_Color_1') {
-            parts.push({ name: 'Text_and_Border', colorIndex: 1, mesh });
-          } else if (mesh.name === 'Relief_Color_2') {
+          } else if (mesh.name === 'Back_Relief_Color_1') {
+            parts.push({ name: 'Back_Text_and_Logo', colorIndex: 1, mesh });
+          } else if (mesh.name === 'Back_Relief_Color_2') {
+            parts.push({ name: 'Back_Logo_Red', colorIndex: 2, mesh });
+          } else if (mesh.name === 'Back_Relief_Color_3') {
+            parts.push({ name: 'Back_Logo_Yellow', colorIndex: 3, mesh });
+          } else if (mesh.name === 'Front_Relief_Color_1') {
+            parts.push({ name: 'Front_Text_and_Border', colorIndex: 1, mesh });
+          } else if (mesh.name === 'Front_Relief_Color_2') {
             parts.push({ name: 'Flag_Red', colorIndex: 2, mesh });
-          } else if (mesh.name === 'Relief_Color_3') {
+          } else if (mesh.name === 'Front_Relief_Color_3') {
             parts.push({ name: 'Flag_Yellow', colorIndex: 3, mesh });
           }
         }
