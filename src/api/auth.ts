@@ -24,7 +24,10 @@ export async function loginTelegram(data: any): Promise<AuthResponse> {
     method: 'POST',
     body: JSON.stringify(data),
   });
-  setTokens(res.accessToken, res.refreshToken);
+  setTokens(res.accessToken, res.refreshToken, 'telegram');
+  if (res.user) {
+    localStorage.setItem('telegram_user', JSON.stringify(res.user));
+  }
   return res;
 }
 
@@ -33,7 +36,10 @@ export async function loginGoogle(credential: string): Promise<AuthResponse> {
     method: 'POST',
     body: JSON.stringify({ credential }),
   });
-  setTokens(res.accessToken, res.refreshToken);
+  setTokens(res.accessToken, res.refreshToken, 'google');
+  if (res.user) {
+    localStorage.setItem('google_user', JSON.stringify(res.user));
+  }
   return res;
 }
 
@@ -61,7 +67,12 @@ export async function registerUser(data: {
 }
 
 export async function getMe(): Promise<UserProfile> {
-  return apiRequest<UserProfile>('/auth/me');
+  const user = await apiRequest<UserProfile>('/auth/me');
+  const provider = getTokens().provider;
+  if (provider && user) {
+    localStorage.setItem(`${provider}_user`, JSON.stringify(user));
+  }
+  return user;
 }
 
 export async function logoutApi(): Promise<void> {

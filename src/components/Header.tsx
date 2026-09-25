@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X } from 'lucide-react';
+import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, activeProvider, availableProviders, switchProvider } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const { tab: activeTab } = useRouter();
@@ -134,6 +134,33 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
               <div style={{ fontSize: '0.82rem', fontWeight: 600, maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.firstName}
               </div>
+              {activeProvider && (
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }} title={activeProvider === 'google' ? 'Google аккаунт' : 'Telegram аккаунт'}>
+                  {activeProvider === 'google' ? '🔵' : '✈️'}
+                </span>
+              )}
+              {availableProviders.length > 1 && (
+                <button
+                  onClick={() => switchProvider(activeProvider === 'google' ? 'telegram' : 'google')}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    marginLeft: '2px',
+                  }}
+                  title={activeProvider === 'google' ? 'Переключить на Telegram' : 'Переключить на Google'}
+                >
+                  <RefreshCw size={11} />
+                  <span>{activeProvider === 'google' ? 'TG' : 'G'}</span>
+                </button>
+              )}
               <button
                 onClick={() => setIsLogoutModalOpen(true)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', marginLeft: '2px', display: 'flex', alignItems: 'center' }}

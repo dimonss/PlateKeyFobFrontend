@@ -1,21 +1,87 @@
 const BASE_PREFIX = import.meta.env.BASE_URL ? import.meta.env.BASE_URL.replace(/\/$/, '') : '';
 const API_BASE = `${BASE_PREFIX}/api`;
 
+export type AuthProviderType = 'google' | 'telegram';
+export const APP_ID = 'keychain';
+const APP_PROVIDER_KEY = `${APP_ID}_auth_provider`;
+
+export function hasTokensFor(provider: AuthProviderType): boolean {
+  return !!localStorage.getItem(`${provider}_accessToken`) && !!localStorage.getItem(`${provider}_refreshToken`);
+}
+
+export function getAvailableProviders(): AuthProviderType[] {
+  const list: AuthProviderType[] = [];
+  if (hasTokensFor('google')) list.push('google');
+  if (hasTokensFor('telegram')) list.push('telegram');
+  return list;
+}
+
+export function getActiveProvider(): AuthProviderType | null {
+  const hasGoogle = hasTokensFor('google');
+  const hasTelegram = hasTokensFor('telegram');
+
+  if (!hasGoogle && !hasTelegram) {
+    return null;
+  }
+  if (hasGoogle && !hasTelegram) {
+    return 'google';
+  }
+  if (hasTelegram && !hasGoogle) {
+    return 'telegram';
+  }
+
+  const stored = localStorage.getItem(APP_PROVIDER_KEY) as AuthProviderType | null;
+  if (stored === 'google' || stored === 'telegram') {
+    return stored;
+  }
+
+  return 'google';
+}
+
+export function setActiveProvider(provider: AuthProviderType) {
+  localStorage.setItem(APP_PROVIDER_KEY, provider);
+}
+
 export function getTokens() {
+  const provider = getActiveProvider();
+  if (!provider) {
+    return { accessToken: null, refreshToken: null, provider: null };
+  }
   return {
-    accessToken: localStorage.getItem('accessToken'),
-    refreshToken: localStorage.getItem('refreshToken'),
+    accessToken: localStorage.getItem(`${provider}_accessToken`),
+    refreshToken: localStorage.getItem(`${provider}_refreshToken`),
+    provider,
   };
 }
 
-export function setTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem('accessToken', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
+export function setTokens(accessToken: string, refreshToken: string, provider?: AuthProviderType) {
+  const targetProvider = provider || getActiveProvider() || 'google';
+  localStorage.setItem(`${targetProvider}_accessToken`, accessToken);
+  localStorage.setItem(`${targetProvider}_refreshToken`, refreshToken);
+  localStorage.setItem(APP_PROVIDER_KEY, targetProvider);
 }
 
-export function clearTokens() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+export function clearTokens(onlyCurrent: boolean = true) {
+  const current = getActiveProvider();
+  if (current && onlyCurrent) {
+    localStorage.removeItem(`${current}_accessToken`);
+    localStorage.removeItem(`${current}_refreshToken`);
+    localStorage.removeItem(`${current}_user`);
+    const remaining = getActiveProvider();
+    if (remaining) {
+      localStorage.setItem(APP_PROVIDER_KEY, remaining);
+    } else {
+      localStorage.removeItem(APP_PROVIDER_KEY);
+    }
+  } else {
+    localStorage.removeItem('google_accessToken');
+    localStorage.removeItem('google_refreshToken');
+    localStorage.removeItem('google_user');
+    localStorage.removeItem('telegram_accessToken');
+    localStorage.removeItem('telegram_refreshToken');
+    localStorage.removeItem('telegram_user');
+    localStorage.removeItem(APP_PROVIDER_KEY);
+  }
 }
 
 let refreshPromise: Promise<boolean> | null = null;

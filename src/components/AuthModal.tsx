@@ -35,7 +35,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     setIsLoading(true);
     try {
       const res = await loginGoogle(response.credential);
-      login(res.user);
+      login(res.user, 'google');
       showToast({
         type: 'success',
         title: 'Успешный вход через Google!',
@@ -54,7 +54,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     setIsLoading(true);
     try {
       const res = await loginTelegram(user);
-      login(res.user);
+      login(res.user, 'telegram');
       showToast({
         type: 'success',
         title: 'Успешный вход через Telegram!',
