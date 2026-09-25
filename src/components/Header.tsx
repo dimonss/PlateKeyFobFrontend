@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X, RefreshCw } from 'lucide-react';
+import { Key, User, LogOut, ShieldCheck, Sun, Moon, Package, Search, Menu, X, RefreshCw, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useToast } from '../context/ToastContext';
 import { useRouter, NavLink } from '../context/RouterContext';
 import { LogoutModal } from './LogoutModal';
 
@@ -11,35 +10,12 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
-  const { user, logout, activeProvider, availableProviders, switchProvider } = useAuth();
+  const { user, activeProvider, availableProviders, switchProvider } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { showToast } = useToast();
   const { tab: activeTab } = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleConfirmLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      showToast({
-        type: 'success',
-        title: 'Выход выполнен',
-        message: 'Вы успешно вышли из учетной записи',
-      });
-      setIsLogoutModalOpen(false);
-      setIsMobileMenuOpen(false);
-    } catch {
-      showToast({
-        type: 'error',
-        title: 'Ошибка',
-        message: 'Не удалось выполнить выход',
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
 
   return (
     <>
@@ -139,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
                   {activeProvider === 'google' ? '🔵' : '✈️'}
                 </span>
               )}
-              {availableProviders.length > 1 && (
+              {availableProviders.length > 1 ? (
                 <button
                   onClick={() => switchProvider(activeProvider === 'google' ? 'telegram' : 'google')}
                   style={{
@@ -159,6 +135,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
                 >
                   <RefreshCw size={11} />
                   <span>{activeProvider === 'google' ? 'TG' : 'G'}</span>
+                </button>
+              ) : availableProviders.length === 1 && (
+                <button
+                  onClick={onOpenAuth}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    marginLeft: '2px',
+                  }}
+                  title={activeProvider === 'google' ? 'Войти через Telegram' : 'Войти через Google'}
+                >
+                  <UserPlus size={11} />
+                  <span>{activeProvider === 'google' ? '+ TG' : '+ G'}</span>
                 </button>
               )}
               <button
@@ -249,11 +246,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
     {/* Logout Confirmation Modal (rendered via Portal) */}
     <LogoutModal
       isOpen={isLogoutModalOpen}
-      onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
-      onConfirm={handleConfirmLogout}
+      onClose={() => setIsLogoutModalOpen(false)}
       user={user}
-      isLoading={isLoggingOut}
+      onOpenAuth={onOpenAuth}
     />
+
   </>
 );
 };

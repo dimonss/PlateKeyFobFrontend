@@ -8,7 +8,7 @@ export interface AuthContextType {
   activeProvider: AuthProviderType | null;
   availableProviders: AuthProviderType[];
   login: (user: UserProfile, provider?: AuthProviderType) => void;
-  logout: () => void;
+  logout: (target?: AuthProviderType | 'all') => Promise<void>;
   switchProvider: (provider: AuthProviderType) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -19,7 +19,7 @@ export const AuthContext = createContext<AuthContextType>({
   activeProvider: null,
   availableProviders: [],
   login: () => {},
-  logout: () => {},
+  logout: async () => {},
   switchProvider: async () => {},
   refreshUser: async () => {},
 });
@@ -36,13 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAvailableProviders(getAvailableProviders());
   }, []);
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(async (target?: AuthProviderType | 'all') => {
     try {
-      await logoutApi();
+      await logoutApi(target);
     } catch {
       // Ignore
     } finally {
-      clearTokens();
+      clearTokens(target);
       const remaining = getActiveProvider();
       if (remaining) {
         setActiveProv(remaining);
@@ -60,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, []);
+
 
   const refreshUser = useCallback(async () => {
     const { accessToken, provider } = getTokens();
