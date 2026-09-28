@@ -130,9 +130,10 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-color)',
                 gap: '10px',
+                flexWrap: 'wrap',
               }}
             >
-              <div>
+              <div style={{ flex: '1 1 200px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
                   🔵 Google
                 </div>
@@ -161,9 +162,10 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-color)',
                 gap: '10px',
+                flexWrap: 'wrap',
               }}
             >
-              <div>
+              <div style={{ flex: '1 1 200px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
                   ✈️ Telegram
                 </div>
@@ -192,9 +194,10 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                 background: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.25)',
                 gap: '10px',
+                flexWrap: 'wrap',
               }}
             >
-              <div>
+              <div style={{ flex: '1 1 200px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f87171' }}>
                   🚪 Выйти со всех сразу
                 </div>
@@ -225,9 +228,10 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-color)',
                 gap: '10px',
+                flexWrap: 'wrap',
               }}
             >
-              <div>
+              <div style={{ flex: '1 1 200px' }}>
                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
                   {hasGoogle ? '🔵 Google (активен)' : '✈️ Telegram (активен)'}
                 </div>
